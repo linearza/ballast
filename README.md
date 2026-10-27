@@ -96,7 +96,7 @@ Ballast is not notarised, so macOS blocks it the first time. Either open **Syste
 xattr -dr com.apple.quarantine ~/Applications/Ballast.app
 ```
 
-Ballast checks GitHub once a day for a newer release and shows a link in the menu when there is one. It never updates itself.
+Ballast checks GitHub once a day for a newer release. When there is one, it sends a notification and shows a link in the menu. It never updates itself.
 
 ## First run
 

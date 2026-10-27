@@ -16,6 +16,7 @@ Fixes from a security and feature review.
 - The update check only links to release pages on github.com.
 - mise: Node, Ruby and Python versions installed with mise, with mise's global version as the default and `mise.toml` pins respected.
 - Xcode and Docker Desktop show when they're running, with a warning before removing them.
+- A notification when a new version of Ballast is out, once per version. Clicking it opens the release page. Ballast now also checks while it stays open, not only when it starts.
 
 ## 0.1.0 — 2026-10-27
 

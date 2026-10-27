@@ -55,6 +55,7 @@ import UserNotifications
     var safeToReclaim: Int64 { summary?.concerns.reduce(0) { $0 + $1.reclaimable } ?? 0 }
 
     func launch() async {
+        UNUserNotificationCenter.current().delegate = NotificationClicks.shared
         summary = await scanner.lastSummary()
         refreshSpace()
         if !prefs.rootsConfirmed {
@@ -132,14 +133,16 @@ import UserNotifications
         await measureTrash()
     }
 
-    /// Checks hourly; scans in the background when the last summary is older than the interval.
+    /// Checks hourly for updates, and scans in the background when the last summary is older than the interval.
     func startSchedule() {
         timer?.invalidate()
         timer = nil
-        guard prefs.rescanHours > 0 else { return }
         let check = { [weak self] in
             Task { @MainActor in
-                guard let self, !self.scanning else { return }
+                guard let self else { return }
+                // Menu bar apps stay open for weeks; `check` itself asks GitHub at most once a day.
+                await self.updates.check()
+                guard self.prefs.rescanHours > 0, !self.scanning else { return }
                 let age = Date().timeIntervalSince(self.summary?.scannedAt ?? .distantPast)
                 if age >= Double(self.prefs.rescanHours) * 3600 { await self.scanNow(background: true) }
             }

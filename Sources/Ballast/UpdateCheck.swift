@@ -1,5 +1,7 @@
+import AppKit
 import BallastCore
 import Foundation
+import UserNotifications
 
 /// Looks for a newer GitHub release at most once a day. Off when Info.plist has no BallastRepo.
 @MainActor @Observable final class UpdateCheck {
@@ -31,9 +33,40 @@ import Foundation
         defaults.set(version, forKey: "latestVersion")
         defaults.set(url, forKey: "latestURL")
         offer(version, url)
+        if let available, defaults.string(forKey: "notifiedVersion") != available.version {
+            defaults.set(available.version, forKey: "notifiedVersion")
+            await notify(available)
+        }
+    }
+
+    /// Once per version. Clicking it opens the release page.
+    private func notify(_ release: Release) async {
+        let center = UNUserNotificationCenter.current()
+        guard (try? await center.requestAuthorization(options: [.alert])) == true else { return }
+        let content = UNMutableNotificationContent()
+        content.title = "Ballast \(release.version) is out"
+        content.body = "Click to see what's new and download it."
+        content.userInfo = ["url": release.url.absoluteString]
+        try? await center.add(UNNotificationRequest(identifier: "update", content: content, trigger: nil))
     }
 
     private func offer(_ version: String, _ url: URL) {
         available = compareVersions(version, current) == .orderedDescending ? Release(version: version, url: url) : nil
+    }
+}
+
+/// Opens a notification's release page when it's clicked, and shows notifications while Ballast is in front.
+final class NotificationClicks: NSObject, UNUserNotificationCenterDelegate, Sendable {
+    static let shared = NotificationClicks()
+
+    func userNotificationCenter(_ center: UNUserNotificationCenter, didReceive response: UNNotificationResponse) async {
+        guard let link = response.notification.request.content.userInfo["url"] as? String,
+              let url = releaseLink(link) else { return }
+        await MainActor.run { _ = NSWorkspace.shared.open(url) }
+    }
+
+    func userNotificationCenter(_ center: UNUserNotificationCenter,
+                                willPresent notification: UNNotification) async -> UNNotificationPresentationOptions {
+        [.banner]
     }
 }
