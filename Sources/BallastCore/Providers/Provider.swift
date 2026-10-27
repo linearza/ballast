@@ -34,7 +34,7 @@ extension Provider {
 
 public enum Providers {
     public static let all: [any Provider] = [
-        RubyProvider(), NodeProvider(), PythonProvider(),
+        RubyProvider(), NodeProvider(), PythonProvider(), HomebrewProvider(), DatabasesProvider(), LoginItemsProvider(),
     ]
 }
 
