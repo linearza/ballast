@@ -84,3 +84,15 @@ public actor DiskScanner {
         return (v?.volumeAvailableCapacityForImportantUsage ?? 0, Int64(v?.volumeTotalCapacity ?? 0))
     }
 }
+
+/// "just now", "5 min ago", "2 h ago", "yesterday", "3 days ago".
+public func relativeScanTime(_ date: Date, now: Date) -> String {
+    let s = max(0, now.timeIntervalSince(date))
+    switch s {
+    case ..<60: return "just now"
+    case ..<3600: return "\(Int(s / 60)) min ago"
+    case ..<86_400: return "\(Int(s / 3600)) h ago"
+    case ..<(2 * 86_400): return "yesterday"
+    default: return "\(Int(s / 86_400)) days ago"
+    }
+}

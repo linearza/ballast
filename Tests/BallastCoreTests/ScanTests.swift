@@ -49,4 +49,13 @@ import Testing
         let reports = await scanner(f).scan(background: true)
         #expect(reports.allSatisfy { $0.items.isEmpty })
     }
+
+    @Test func relativeScanTimes() {
+        let now = Date(timeIntervalSince1970: 1_800_000_000)
+        #expect(relativeScanTime(now.addingTimeInterval(-30), now: now) == "just now")
+        #expect(relativeScanTime(now.addingTimeInterval(-5 * 60), now: now) == "5 min ago")
+        #expect(relativeScanTime(now.addingTimeInterval(-2 * 3600 - 100), now: now) == "2 h ago")
+        #expect(relativeScanTime(now.addingTimeInterval(-30 * 3600), now: now) == "yesterday")
+        #expect(relativeScanTime(now.addingTimeInterval(-3 * 86_400 - 100), now: now) == "3 days ago")
+    }
 }
