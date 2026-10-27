@@ -13,7 +13,7 @@
 
 Ballast looks at the things that quietly fill a developer's disk and shows what each one is, how big it is, and whether anything still uses it:
 
-- **Developer toolchains:** Ruby, Node and Python versions (rvm, rbenv, asdf, nvm, fnm, pyenv), Homebrew leftovers, Xcode versions, simulators and runtimes, GitHub Actions runners
+- **Developer toolchains:** Ruby, Node and Python versions (rvm, rbenv, asdf, mise, nvm, fnm, pyenv), Homebrew leftovers, Xcode versions, simulators and runtimes, GitHub Actions runners
 - **Containers and VMs:** Docker images, volumes and build cache, and Docker Desktop itself
 - **Project leftovers:** `node_modules` in projects you haven't touched for a while, and git worktrees whose pull request is merged
 - **Caches:** package manager caches (npm, Yarn, pnpm, pip, Cargo, Gradle, CocoaPods and more) and large app caches
@@ -96,11 +96,11 @@ Ballast is not notarised, so macOS blocks it the first time. Either open **Syste
 xattr -dr com.apple.quarantine ~/Applications/Ballast.app
 ```
 
-Ballast checks GitHub once a day for a newer release and shows a link in the menu when there is one. It never updates itself.
+Ballast checks GitHub once a day for a newer release. When there is one, it sends a notification and shows a link in the menu. It never updates itself.
 
 ## First run
 
-Ballast asks where your projects live. It uses those folders to see which language versions your projects need (from files like `.ruby-version`, `.nvmrc`, `.tool-versions` and `package.json`), so it never suggests removing one that's in use, and to find project leftovers. You can change the folders in Settings at any time.
+Ballast asks where your projects live. It uses those folders to see which language versions your projects need (from files like `.ruby-version`, `.nvmrc`, `.tool-versions`, `mise.toml` and `package.json`), so it never suggests removing one that's in use, and to find project leftovers. You can change the folders in Settings at any time.
 
 ## Settings
 

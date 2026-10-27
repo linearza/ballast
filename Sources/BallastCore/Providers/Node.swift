@@ -1,6 +1,6 @@
 import Foundation
 
-/// Node versions from nvm, fnm, Volta and asdf.
+/// Node versions from nvm, fnm, Volta, asdf and mise.
 public struct NodeProvider: Provider {
     public init() {}
     public let id = "node"
@@ -12,6 +12,7 @@ public struct NodeProvider: Provider {
 
     public func isPresent(_ env: Environment) async -> Bool {
         ([".nvm/versions/node", ".volta/tools/image/node", ".asdf/installs/nodejs"] + Self.fnmDirs).contains { exists(env.path($0)) }
+            || exists(miseInstalls(env, tool: "node"))
     }
 
     public func scan(_ env: Environment, pins: Pins) async -> [Item] {
@@ -52,6 +53,11 @@ public struct NodeProvider: Provider {
         let asdfDefault = asdfGlobal(env, tool: "nodejs")
         for v in subfolders(asdf) { add("asdf", asdf, v, isDefault: v == asdfDefault) }
 
+        let mise = miseInstalls(env, tool: "node")
+        let miseVersions = subfolders(mise)
+        let miseDefault = miseGlobal(env, tools: ["node", "nodejs"], installed: miseVersions)
+        for v in miseVersions { add("mise", mise, v, isDefault: v == miseDefault) }
+
         return await measured(items)
     }
 
@@ -79,6 +85,7 @@ public struct NodeProvider: Provider {
             case "nvm": kind = .shell("\(source) && nvm uninstall \(shellQuote(name))")
             case "fnm": kind = .command(argv: ["fnm", "uninstall", name])
             case "asdf": kind = .command(argv: ["asdf", "uninstall", "nodejs", name])
+            case "mise": kind = .command(argv: ["mise", "uninstall", "node@\(name)"])
             default: kind = .trash(item.paths)
             }
             return [Step("Remove \(item.title)", kind, bytes: item.bytes, itemID: item.id)]

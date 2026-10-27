@@ -135,6 +135,21 @@ func asdfGlobal(_ env: Environment, tool: String) -> String? {
     return nil
 }
 
+/// Where mise keeps a tool's versions, one folder each. Its alias links (`24`, `latest`) are skipped by `subfolders`.
+func miseInstalls(_ env: Environment, tool: String) -> URL {
+    env.path(".local/share/mise/installs/\(tool)")
+}
+
+/// The installed version mise's global config selects: an exact version, a prefix like `24`, or `latest`.
+func miseGlobal(_ env: Environment, tools: [String], installed: [String]) -> String? {
+    let config = (try? String(contentsOf: env.path(".config/mise/config.toml"), encoding: .utf8)).map(parseMiseTools) ?? [:]
+    guard let wanted = tools.lazy.compactMap({ config[$0]?.first }).first ?? tools.lazy.compactMap({ asdfGlobal(env, tool: $0) }).first
+    else { return nil }
+    let newestFirst = installed.sorted { compareVersions($0, $1) == .orderedDescending }
+    if ["latest", "lts"].contains(wanted) || wanted.hasPrefix("lts") { return newestFirst.first }
+    return newestFirst.first { versionMatches(pin: wanted, installed: $0) }
+}
+
 func pinBadge(_ pins: Pins, _ map: [String: [String]], installed: String) -> Badge? {
     let by = pins.pinners(of: map, installed: installed)
     return by.isEmpty ? nil : .pinned(by: by)

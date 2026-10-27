@@ -62,6 +62,40 @@ func pinnedNodeVersion(_ raw: String) -> String? {
     return kept.joined(separator: ".")
 }
 
+/// The `[tools]` table of a mise config: `node = "22"`, `python = ["3.12", "3.11"]` or
+/// `ruby = { version = "3.3" }`. Keys are tool names as written (`node`, `nodejs`, `"ruby"`).
+func parseMiseTools(_ toml: String) -> [String: [String]] {
+    var tools: [String: [String]] = [:]
+    var inTools = false
+    for raw in toml.split(whereSeparator: \.isNewline) {
+        let line = raw.split(separator: "#", maxSplits: 1, omittingEmptySubsequences: false).first.map(String.init)?
+            .trimmingCharacters(in: .whitespaces) ?? ""
+        if line.hasPrefix("[") {
+            inTools = line == "[tools]"
+            continue
+        }
+        guard inTools, let eq = line.firstIndex(of: "=") else { continue }
+        let key = line[..<eq].trimmingCharacters(in: .whitespaces).trimmingCharacters(in: CharacterSet(charactersIn: "\"'"))
+        var value = String(line[line.index(after: eq)...])
+        if let m = value.firstMatch(of: /version\s*=\s*["']([^"']+)["']/) { value = "\"\(m.1)\"" }
+        let versions = value.matches(of: /["']([^"']+)["']/).map { String($0.1) }
+        if !key.isEmpty, !versions.isEmpty { tools[key, default: []] += versions }
+    }
+    return tools
+}
+
+/// Which pin map a mise or asdf tool name belongs to.
+func pinMap(forTool tool: String) -> WritableKeyPath<Pins, [String: [String]]>? {
+    switch tool {
+    case "ruby": \.ruby
+    case "node", "nodejs": \.node
+    case "python": \.python
+    default: nil
+    }
+}
+
+let miseConfigNames = ["mise.toml", ".mise.toml", "mise.local.toml", ".mise.local.toml"]
+
 private let skippedFolders: Set<String> = ["node_modules", ".git", "vendor"]
 
 public func scanPins(roots: [URL], maxDepth: Int = 3) -> Pins {
@@ -88,9 +122,13 @@ public func scanPins(roots: [URL], maxDepth: Int = 3) -> Pins {
             for line in text.split(whereSeparator: \.isNewline) {
                 let words = line.split(separator: " ").map(String.init)
                 guard let tool = words.first else { continue }
-                let map: WritableKeyPath<Pins, [String: [String]]>? =
-                    tool == "ruby" ? \.ruby : tool == "nodejs" ? \.node : tool == "python" ? \.python : nil
-                if let map { words.dropFirst().forEach { add(map, $0, project) } }
+                if let map = pinMap(forTool: tool) { words.dropFirst().forEach { add(map, $0, project) } }
+            }
+        }
+        for name in miseConfigNames where names.contains(name) {
+            for (tool, versions) in parseMiseTools(read(name) ?? "") {
+                // `latest` and `lts` don't pin a version.
+                if let map = pinMap(forTool: tool) { versions.filter { $0.first?.isNumber == true }.forEach { add(map, $0, project) } }
             }
         }
         if names.contains("Gemfile"), let text = read("Gemfile"),

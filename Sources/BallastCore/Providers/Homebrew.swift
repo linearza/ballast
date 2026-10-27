@@ -121,8 +121,9 @@ public struct DatabasesProvider: Provider {
             let formula = matchingFormula(name, in: state.formulae)
             if formula == nil { badges.insert(.orphaned) }
             let service = state.started.first { $0 == name || $0 == formula }
-            if service != nil { badges.insert(.running) }
-            var detail = formula == nil ? "\(name) is no longer installed" : (service != nil ? "Running" : "Stopped")
+            let live = service != nil || hasLivePidFile(prefix.appending(path: "var/\(name)"))
+            if live { badges.insert(.running) }
+            var detail = formula == nil ? "\(name) is no longer installed" : (live ? "Running" : "Stopped")
             if let service, name.hasPrefix("postgres"), let top = await largestDatabases(env, prefix: prefix, formula: service) {
                 detail += " · " + top
             }
@@ -130,6 +131,17 @@ public struct DatabasesProvider: Provider {
                               bytes: 0, risk: .yourData, badges: badges))
         }
         return await measured(items)
+    }
+
+    /// A server started outside `brew services` (pg_ctl, mysqld) leaves a pid file in its data folder,
+    /// like `postmaster.pid` or `<host>.pid`, whose first line is the server's pid.
+    func hasLivePidFile(_ dir: URL) -> Bool {
+        let files = (try? FileManager.default.contentsOfDirectory(atPath: dir.path)) ?? []
+        return files.filter { $0.hasSuffix(".pid") }.contains { file in
+            guard let line = firstLine(dir.appending(path: file)), let pid = Int32(line.trimmingCharacters(in: .whitespaces)),
+                  pid > 0 else { return false }
+            return kill(pid, 0) == 0 || errno == EPERM
+        }
     }
 
     func matchingFormula(_ dir: String, in formulae: Set<String>) -> String? {

@@ -44,13 +44,18 @@ public final class Executor: Sendable {
         let ids = Set(plan.steps.compactMap(\.itemID))
         let planned = items.filter { ids.contains($0.id) }
         let refusals = planned.isEmpty ? [:] : await provider.recheck(planned, env: env, pins: pins)
+        var failed = Set<String>()
         for step in plan.steps {
             let outcome: StepOutcome
             if let id = step.itemID, let refusal = refusals[id] {
                 outcome = .skipped(refusal.reason)
+            } else if let id = step.itemID, failed.contains(id) {
+                // An app's leftovers mustn't go when the app itself stayed.
+                outcome = .skipped("An earlier step failed")
             } else {
                 outcome = await perform(step.kind)
             }
+            if case .failed = outcome, let id = step.itemID { failed.insert(id) }
             let result = StepResult(step: step, outcome: outcome)
             log(result)
             progress(result)
@@ -69,6 +74,7 @@ public final class Executor: Sendable {
             let present = urls.filter { FileManager.default.fileExists(atPath: $0.path) || isSymlink($0) }
             guard !present.isEmpty else { return .skipped("Already gone") }
             for url in present {
+                if let why = ownedByAnotherUser(url) { return .failed(why) }
                 do { try env.trash(url) } catch { return failure(error, url) }
             }
             return .done
@@ -100,6 +106,21 @@ public final class Executor: Sendable {
 
     func failure(_ error: Error, _ url: URL) -> StepOutcome {
         isPermission(error) ? .failed(Self.needsFullDiskAccess) : .failed(error.localizedDescription)
+    }
+
+    public static let ownedByAnotherUser = "Installed for all users. Move it to the Trash in Finder, which asks for your password"
+
+    /// Moving needs write access to the parent folder, and to a folder itself. Without it, the item belongs to
+    /// another user (often root: App Store apps, Xcode), which Full Disk Access doesn't change.
+    /// EPERM is left alone: that's macOS privacy protection, which Full Disk Access does fix.
+    func ownedByAnotherUser(_ url: URL) -> String? {
+        var isDir: ObjCBool = false
+        let checks = [url.deletingLastPathComponent()]
+            + (FileManager.default.fileExists(atPath: url.path, isDirectory: &isDir) && isDir.boolValue && !isSymlink(url) ? [url] : [])
+        for dir in checks where access(dir.path, W_OK) != 0 && errno == EACCES {
+            return Self.ownedByAnotherUser
+        }
+        return nil
     }
 
     func isPermission(_ error: Error) -> Bool {

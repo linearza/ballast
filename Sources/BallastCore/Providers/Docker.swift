@@ -42,7 +42,8 @@ public struct DockerProvider: Provider {
                               paths: [env.path(".docker")], bytes: 0, risk: .review))
         }
         if let app = app(env) {
-            plain.append(Item(id: "docker.app", title: "Docker Desktop", detail: app.path, paths: [app], bytes: 0, risk: .review))
+            plain.append(Item(id: "docker.app", title: "Docker Desktop", detail: app.path, paths: [app], bytes: 0, risk: .review,
+                              badges: isAppRunning(app) ? [.running] : []))
         }
         let links = links(env)
         if !links.isEmpty {
@@ -100,6 +101,9 @@ public struct DockerProvider: Provider {
 
     func uninstallPlan(_ items: [Item], env: Environment) -> Plan {
         var plan = Plan(warnings: ["This removes Docker Desktop with all its images, containers and volumes."])
+        if items.contains(where: { $0.id == "docker.app" && $0.badges.contains(.running) }) {
+            plan.warnings.append("Docker Desktop is running. Quit it first.")
+        }
         let candidates = [app(env), env.path(".Trash/Docker.app")].compactMap { $0 }
         if let uninstaller = candidates.map({ $0.appending(path: "Contents/MacOS/uninstall") }).first(where: exists) {
             plan.steps.append(Step("Run Docker's own uninstaller", .command(argv: [uninstaller.path])))

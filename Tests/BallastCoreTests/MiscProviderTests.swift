@@ -37,16 +37,22 @@ import Testing
         #expect(items.map(\.title) == ["SomeTool"])
     }
 
+    /// A real-looking 64-hex digest for a fixture name.
+    func hex(_ s: String) -> String {
+        let h = s.utf8.map { String(format: "%02x", $0) }.joined()
+        return h + String(repeating: "0", count: 64 - h.count)
+    }
+
     func ollama(_ f: Fixture) {
         func manifest(_ name: String, _ tag: String, _ digests: [String]) {
-            let layers = digests.map { #"{"digest":"sha256:\#($0)","size":1}"# }.joined(separator: ",")
+            let layers = digests.map { #"{"digest":"sha256:\#(hex($0))","size":1}"# }.joined(separator: ",")
             f.file(".ollama/models/manifests/registry.ollama.ai/library/\(name)/\(tag)",
-                   contents: #"{"config":{"digest":"sha256:cfg\#(name)","size":1},"layers":[\#(layers)]}"#)
-            f.file(".ollama/models/blobs/sha256-cfg\(name)", bytes: 100)
+                   contents: #"{"config":{"digest":"sha256:\#(hex("cfg" + name))","size":1},"layers":[\#(layers)]}"#)
+            f.file(".ollama/models/blobs/sha256-\(hex("cfg" + name))", bytes: 100)
         }
-        f.file(".ollama/models/blobs/sha256-shared", bytes: 100_000)
-        f.file(".ollama/models/blobs/sha256-own1", bytes: 200_000)
-        f.file(".ollama/models/blobs/sha256-own2", bytes: 300_000)
+        f.file(".ollama/models/blobs/sha256-\(hex("shared"))", bytes: 100_000)
+        f.file(".ollama/models/blobs/sha256-\(hex("own1"))", bytes: 200_000)
+        f.file(".ollama/models/blobs/sha256-\(hex("own2"))", bytes: 300_000)
         manifest("llama", "8b", ["shared", "own1"])
         manifest("qwen", "7b", ["shared", "own2"])
     }
@@ -66,9 +72,9 @@ import Testing
         guard case .trash(let urls) = try #require(plan.steps.first?.kind) else { Issue.record("expected trash"); return }
         let names = Set(urls.map(\.lastPathComponent))
         #expect(names.contains("8b"))
-        #expect(names.contains("sha256-own1"))
-        #expect(names.contains("sha256-cfgllama"))
-        #expect(!names.contains("sha256-shared"))
+        #expect(names.contains("sha256-\(hex("own1"))"))
+        #expect(names.contains("sha256-\(hex("cfgllama"))"))
+        #expect(!names.contains("sha256-\(hex("shared"))"))
     }
 
     @Test func ollamaUsesRmWhenServerUp() async throws {

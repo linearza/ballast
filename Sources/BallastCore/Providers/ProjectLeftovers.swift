@@ -169,11 +169,15 @@ public struct ProjectLeftoversProvider: Provider {
         return plan
     }
 
-    /// A worktree's `.git` file reads `gitdir: <repo>/.git/worktrees/<name>`.
+    /// A worktree's `.git` file reads `gitdir: <repo>/.git/worktrees/<name>`, relative to the worktree
+    /// when git's `worktree.useRelativePaths` is on.
     func mainRepo(of worktree: URL) -> String? {
-        guard let line = firstLine(worktree.appending(path: ".git")), line.hasPrefix("gitdir: "),
-              let r = line.dropFirst(8).range(of: "/.git/worktrees/") else { return nil }
-        return String(line.dropFirst(8)[..<r.lowerBound])
+        guard let line = firstLine(worktree.appending(path: ".git")), line.hasPrefix("gitdir: ") else { return nil }
+        let raw = String(line.dropFirst(8))
+        let gitdir = raw.hasPrefix("/") ? URL(filePath: raw) : worktree.appending(path: raw)
+        let path = gitdir.standardizedFileURL.path
+        guard let r = path.range(of: "/.git/worktrees/") else { return nil }
+        return String(path[..<r.lowerBound])
     }
 }
 

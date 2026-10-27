@@ -35,7 +35,8 @@ public struct AIModelsProvider: Provider {
               let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else { return [] }
         let config = (json["config"] as? [String: Any]).map { [$0] } ?? []
         let layers = json["layers"] as? [[String: Any]] ?? []
-        return (config + layers).compactMap { $0["digest"] as? String }.map {
+        // Only well-formed digests, so a crafted manifest can't point outside the blobs folder.
+        return (config + layers).compactMap { $0["digest"] as? String }.filter(isSHA256Digest).map {
             ollamaRoot(env).appending(path: "blobs/\($0.replacingOccurrences(of: ":", with: "-"))")
         }
     }
@@ -114,4 +115,11 @@ public struct AIModelsProvider: Provider {
         }
         return plan
     }
+}
+
+/// `sha256:` followed by 64 lowercase hex digits.
+func isSHA256Digest(_ s: String) -> Bool {
+    guard s.hasPrefix("sha256:") else { return false }
+    let hex = s.dropFirst(7)
+    return hex.count == 64 && hex.allSatisfy { ("0"..."9").contains($0) || ("a"..."f").contains($0) }
 }

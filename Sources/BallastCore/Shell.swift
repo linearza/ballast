@@ -45,10 +45,16 @@ public struct ProcessRunner: CommandRunner {
         let marker = "__BALLAST_PATH__"
         let r = execBlocking(URL(filePath: "/bin/zsh"), ["-lc", "printf '\(marker)%s' \"$PATH\""],
                              env: ProcessInfo.processInfo.environment, timeout: 10)
-        guard r.ok, let range = r.stdout.range(of: marker) else { return fallbackPath }
+        guard r.ok, let range = r.stdout.range(of: marker) else { return withUserBin(fallbackPath) }
         let path = String(r.stdout[range.upperBound...])
-        return path.isEmpty ? fallbackPath : path
+        return withUserBin(path.isEmpty ? fallbackPath : path)
     }()
+
+    /// mise's installer puts it in ~/.local/bin and adds that to .zshrc, which a login shell doesn't read.
+    static func withUserBin(_ path: String) -> String {
+        let bin = FileManager.default.homeDirectoryForCurrentUser.appending(path: ".local/bin").path
+        return path.split(separator: ":").contains(Substring(bin)) ? path : path + ":" + bin
+    }
 
     static var environment: [String: String] {
         var env = ProcessInfo.processInfo.environment
