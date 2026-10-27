@@ -24,8 +24,11 @@ struct MainWindowRoot: View {
         .sheet(item: Binding(get: { model.permission }, set: { model.permission = $0 })) { info in
             PermissionsSheet(info: info) { model.permission = nil }
         }
+        .sheet(isPresented: Binding(get: { model.firstRun }, set: { _ in })) {
+            FirstRunSheet(model: model)
+        }
         .task {
-            if model.reports.isEmpty { await model.scanNow() }
+            if model.reports.isEmpty && !model.firstRun { await model.scanNow() }
         }
     }
 }

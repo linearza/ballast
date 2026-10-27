@@ -20,18 +20,23 @@ import Foundation
     var rootsConfirmed: Bool {
         didSet { defaults.set(rootsConfirmed, forKey: "rootsConfirmed") }
     }
+    /// Days without activity before a project's node_modules counts as safe to remove.
+    var idleDays: Int {
+        didSet { defaults.set(idleDays, forKey: "idleDays") }
+    }
     /// Set once measuring a protected folder worked, so a later failure means macOS forgot the grant.
     var hadFullDiskAccess: Bool {
         didSet { defaults.set(hadFullDiskAccess, forKey: "hadFullDiskAccess") }
     }
 
     init() {
-        defaults.register(defaults: ["rescanHours": 24, "lowSpacePercent": 10])
+        defaults.register(defaults: ["rescanHours": 24, "lowSpacePercent": 10, "idleDays": 60])
         projectRoots = defaults.stringArray(forKey: "projectRoots") ?? []
         rescanHours = defaults.integer(forKey: "rescanHours")
         lowSpacePercent = defaults.integer(forKey: "lowSpacePercent")
         rootsConfirmed = defaults.bool(forKey: "rootsConfirmed")
         hadFullDiskAccess = defaults.bool(forKey: "hadFullDiskAccess")
+        idleDays = defaults.integer(forKey: "idleDays")
     }
 
     var rootURLs: [URL] { projectRoots.map { URL(filePath: $0) } }

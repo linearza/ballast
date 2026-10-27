@@ -29,6 +29,9 @@ struct Popover: View {
             Divider()
             trash
             Divider()
+            if let update = model.updates.available {
+                Link("Ballast \(update.version) is out", destination: update.url).font(.callout)
+            }
             footer
         }
         .padding(14)

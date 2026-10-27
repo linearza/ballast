@@ -2,13 +2,14 @@ import Foundation
 
 /// Leftovers inside your projects: `node_modules` folders and git worktrees.
 public struct ProjectLeftoversProvider: Provider {
-    public init() {}
+    public init(idleDays: Int = 60) { self.idleDays = idleDays }
     public let id = "projects"
     public let title = "Project leftovers"
     public let section = Section.projects
     public let symbol = "folder"
 
-    static let idleDays = 60
+    /// node_modules in projects quiet for this long count as safe to remove.
+    let idleDays: Int
 
     public func isPresent(_ env: Environment) async -> Bool {
         env.projectRoots.contains(where: exists)
@@ -43,7 +44,7 @@ public struct ProjectLeftoversProvider: Provider {
     func nodeModulesItem(_ nm: URL, env: Environment) async -> Item {
         let project = nm.deletingLastPathComponent()
         let last = await lastActivity(project, env: env)
-        let idle = last.map { env.now().timeIntervalSince($0) >= Double(Self.idleDays) * 86_400 } ?? true
+        let idle = last.map { env.now().timeIntervalSince($0) >= Double(idleDays) * 86_400 } ?? true
         let name = project.lastPathComponent
         let when = last.map { $0.formatted(date: .abbreviated, time: .omitted) } ?? "unknown"
         return Item(id: "project.nm.\(nm.path)", title: "\(name) node_modules", detail: "Last activity \(when)",

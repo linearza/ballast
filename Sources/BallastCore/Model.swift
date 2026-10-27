@@ -202,3 +202,19 @@ public func removeLabel(count: Int, bytes: Int64) -> String {
 
 /// `Section` for SwiftUI files, where it clashes with SwiftUI.Section.
 public typealias ConcernSection = Section
+
+// MARK: - Versions
+
+/// Compares dotted versions numerically, ignoring a leading `v`; missing parts count as 0.
+public func compareVersions(_ a: String, _ b: String) -> ComparisonResult {
+    func parts(_ s: String) -> [Int] {
+        let t = s.hasPrefix("v") || s.hasPrefix("V") ? String(s.dropFirst()) : s
+        return t.split(separator: ".").map { Int($0.prefix { $0.isNumber }) ?? 0 }
+    }
+    let x = parts(a), y = parts(b)
+    for i in 0..<max(x.count, y.count) {
+        let l = i < x.count ? x[i] : 0, r = i < y.count ? y[i] : 0
+        if l != r { return l < r ? .orderedAscending : .orderedDescending }
+    }
+    return .orderedSame
+}

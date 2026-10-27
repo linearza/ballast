@@ -20,7 +20,7 @@ import SwiftUI
     func showSettings(_ model: AppModel) {
         if settings == nil {
             settings = window("Ballast Settings", size: NSSize(width: 520, height: 440), resizable: false,
-                              content: SettingsRoot(model: model))
+                              content: SettingsView(model: model))
         }
         bringForward(settings)
     }
@@ -51,9 +51,4 @@ import SwiftUI
         }
         if w === settings { settings = nil }
     }
-}
-
-struct SettingsRoot: View {
-    let model: AppModel
-    var body: some View { Text("Settings").padding() }
 }

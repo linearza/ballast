@@ -22,6 +22,9 @@ import UserNotifications
     var permission: PermissionProblemInfo?
     var measuring: Set<String> = []
     let prefs = Preferences()
+    let updates = UpdateCheck()
+    /// Shows the "Where are your projects?" sheet.
+    var firstRun = false
 
     @ObservationIgnored private var timer: Timer?
 
@@ -36,7 +39,10 @@ import UserNotifications
     }
 
     var env: Environment { .live(projectRoots: prefs.rootURLs) }
-    var scanner: DiskScanner { DiskScanner(env: env, summaryURL: Self.summaryURL) }
+    var providers: [any Provider] {
+        Providers.all.map { $0.id == "projects" ? ProjectLeftoversProvider(idleDays: prefs.idleDays) : $0 }
+    }
+    var scanner: DiskScanner { DiskScanner(env: env, providers: providers, summaryURL: Self.summaryURL) }
 
     var freeFraction: Double { total > 0 ? Double(free) / Double(total) : 1 }
     var lowSpace: Bool { total > 0 && freeFraction * 100 < Double(prefs.lowSpacePercent) }
@@ -45,8 +51,23 @@ import UserNotifications
     func launch() async {
         summary = await scanner.lastSummary()
         refreshSpace()
-        startSchedule()
+        if !prefs.rootsConfirmed {
+            firstRun = true
+            Windows.shared.showMain(self)
+        } else {
+            startSchedule()
+        }
         await measureTrash()
+        await updates.check()
+    }
+
+    /// The first-run sheet's Continue.
+    func confirmRoots(_ roots: [String]) async {
+        prefs.projectRoots = roots
+        prefs.rootsConfirmed = true
+        firstRun = false
+        startSchedule()
+        await scanNow()
     }
 
     func refreshSpace() {
@@ -126,7 +147,7 @@ import UserNotifications
         reports = []
     }
 
-    func provider(_ id: String) -> (any Provider)? { Providers.all.first { $0.id == id } }
+    func provider(_ id: String) -> (any Provider)? { providers.first { $0.id == id } }
     func report(_ id: String) -> ConcernReport? { reports.first { $0.id == id } }
 
     /// Builds the plan for ticked items (or an extra action) and opens the confirmation sheet.
