@@ -15,20 +15,28 @@ public protocol Provider: Sendable {
     func extraActions(_ items: [Item]) -> [ProviderAction]
     /// `ids` are item ids or extra action ids.
     func plan(_ ids: [String], items: [Item], env: Environment) async -> Plan
-    /// Runs right before removal: a reason to skip this item now, or nil.
-    func recheck(_ item: Item, env: Environment, pins: Pins) async -> Refusal?
+    /// Runs right before removal: a reason to skip each item that changed since the scan, by item id.
+    func recheck(_ items: [Item], env: Environment, pins: Pins) async -> [String: Refusal]
 }
 
 extension Provider {
     public var needsUserStart: Bool { false }
     public func extraActions(_ items: [Item]) -> [ProviderAction] { [] }
 
-    public func recheck(_ item: Item, env: Environment, pins: Pins) async -> Refusal? {
-        guard let fresh = await scan(env, pins: pins).first(where: { $0.id == item.id }) else {
-            return Refusal(itemID: item.id, reason: "Already gone")
+    /// Scans once and compares every item against what it finds now.
+    public func recheck(_ items: [Item], env: Environment, pins: Pins) async -> [String: Refusal] {
+        let fresh = Dictionary(await scan(env, pins: pins).map { ($0.id, $0) }, uniquingKeysWith: { a, _ in a })
+        var refusals: [String: Refusal] = [:]
+        for item in items {
+            guard let now = fresh[item.id] else {
+                refusals[item.id] = Refusal(itemID: item.id, reason: "Already gone")
+                continue
+            }
+            if now.inUse && !item.inUse {
+                refusals[item.id] = Refusal(itemID: item.id, reason: newlyInUseReason(now.badges.subtracting(item.badges), noun: title))
+            }
         }
-        guard fresh.inUse, !item.inUse else { return nil }
-        return Refusal(itemID: item.id, reason: newlyInUseReason(fresh.badges.subtracting(item.badges), noun: title))
+        return refusals
     }
 }
 

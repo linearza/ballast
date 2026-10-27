@@ -12,9 +12,30 @@ struct StubProvider: Provider {
     func isPresent(_ env: Environment) async -> Bool { true }
     func scan(_ env: Environment, pins: Pins) async -> [Item] { [] }
     func plan(_ ids: [String], items: [Item], env: Environment) async -> Plan { Plan() }
-    func recheck(_ item: Item, env: Environment, pins: Pins) async -> Refusal? {
-        refuse.contains(item.id) ? Refusal(itemID: item.id, reason: "Now in use") : nil
+    func recheck(_ items: [Item], env: Environment, pins: Pins) async -> [String: Refusal] {
+        Dictionary(items.filter { refuse.contains($0.id) }.map { ($0.id, Refusal(itemID: $0.id, reason: "Now in use")) },
+                   uniquingKeysWith: { a, _ in a })
     }
+}
+
+/// Counts scans; uses the default recheck.
+final class ScanCounter: @unchecked Sendable {
+    private let lock = NSLock()
+    private var n = 0
+    var count: Int { lock.withLock { n } }
+    func tick() { lock.withLock { n += 1 } }
+}
+
+struct CountingProvider: Provider {
+    let counter: ScanCounter
+    let items: [Item]
+    let id = "counting"
+    let title = "Counting"
+    let section = Section.other
+    let symbol = "circle"
+    func isPresent(_ env: Environment) async -> Bool { true }
+    func scan(_ env: Environment, pins: Pins) async -> [Item] { counter.tick(); return items }
+    func plan(_ ids: [String], items: [Item], env: Environment) async -> Plan { Plan() }
 }
 
 @Suite struct ExecuteTests {
@@ -57,6 +78,18 @@ struct StubProvider: Provider {
         #expect(why == "Now in use")
         #expect(FileManager.default.fileExists(atPath: u.path))
         #expect(!FileManager.default.fileExists(atPath: v.path))
+    }
+
+    @Test func recheckScansOnce() async {
+        let f = Fixture()
+        let urls = ["a", "b", "c"].map { f.file("nm/\($0)", bytes: 10) }
+        let items = zip(["a", "b", "c"], urls).map { item($0, [$1]) }
+        let counter = ScanCounter()
+        let results = await Executor(env: f.env(runner: FakeRunner()), logURL: f.url("state/actions.log"))
+            .run(Plan(steps: items.map { Step($0.id, .trash($0.paths), itemID: $0.id) }),
+                 provider: CountingProvider(counter: counter, items: items), items: items, pins: Pins()) { _ in }
+        #expect(counter.count == 1)
+        #expect(results.allSatisfy { $0.outcome == .done })
     }
 
     @Test func failedCommandReportsStderr() async {

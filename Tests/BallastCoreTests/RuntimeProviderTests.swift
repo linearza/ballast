@@ -142,9 +142,9 @@ import Testing
         let f = rvm()
         let pins = scanPins(roots: [f.url("Projects")])
         let item = try #require(await RubyProvider().scan(f.env(), pins: pins).first { $0.id == "ruby.rvm.3.2.0" })
-        #expect(await RubyProvider().recheck(item, env: f.env(), pins: pins) == nil)
+        #expect(await RubyProvider().recheck([item], env: f.env(), pins: pins).isEmpty)
         f.file(".rvm/config/alias", contents: "default=ruby-3.2.0\n")
-        let refusal = await RubyProvider().recheck(item, env: f.env(), pins: pins)
+        let refusal = await RubyProvider().recheck([item], env: f.env(), pins: pins)[item.id]
         #expect(refusal?.reason == "Now the default Ruby")
     }
 

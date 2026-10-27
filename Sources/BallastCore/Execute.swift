@@ -41,16 +41,13 @@ public final class Executor: Sendable {
     public func run(_ plan: Plan, provider: any Provider, items: [Item], pins: Pins,
                     progress: @Sendable (StepResult) -> Void) async -> [StepResult] {
         var results: [StepResult] = []
-        var checked: [String: Refusal?] = [:]
+        let ids = Set(plan.steps.compactMap(\.itemID))
+        let planned = items.filter { ids.contains($0.id) }
+        let refusals = planned.isEmpty ? [:] : await provider.recheck(planned, env: env, pins: pins)
         for step in plan.steps {
-            var outcome: StepOutcome
-            if let id = step.itemID, let item = items.first(where: { $0.id == id }) {
-                if checked[id] == nil { checked[id] = .some(await provider.recheck(item, env: env, pins: pins)) }
-                if let refusal = checked[id] ?? nil {
-                    outcome = .skipped(refusal.reason)
-                } else {
-                    outcome = await perform(step.kind)
-                }
+            let outcome: StepOutcome
+            if let id = step.itemID, let refusal = refusals[id] {
+                outcome = .skipped(refusal.reason)
             } else {
                 outcome = await perform(step.kind)
             }
