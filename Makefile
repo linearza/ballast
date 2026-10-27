@@ -43,5 +43,8 @@ release: check
 	cd $(DIST) && rm -f $(APP)-$(VERSION).zip && ditto -c -k --keepParent $(APP).app $(APP)-$(VERSION).zip
 	@echo "$(DIST)/$(APP)-$(VERSION).zip"
 
+icon:
+	swift scripts/icon.swift Resources/AppIcon.icns
+
 clean:
 	rm -rf .build $(DIST)
