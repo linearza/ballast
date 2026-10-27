@@ -100,3 +100,90 @@ public struct ConcernReport: Identifiable, Sendable {
         items.filter { $0.risk == .regenerable && !$0.inUse }.reduce(0) { $0 + $1.bytes }
     }
 }
+
+// MARK: - Plans
+
+public enum StepKind: Sendable, Equatable {
+    /// A tool's own command, run directly.
+    case command(argv: [String])
+    /// A tool's own command that needs its shell setup (rvm, nvm), run with `zsh -lc`.
+    case shell(String)
+    case trash([URL])
+    /// Empties a file in place, for logs a running service still writes to.
+    case truncate(URL)
+    case unloadLoginItem(label: String, plist: URL)
+    /// Needs administrator rights: shown with a Copy button, never run by Ballast.
+    case copyToTerminal(String)
+
+    /// What the confirmation sheet shows for this step.
+    public var display: String {
+        switch self {
+        case .command(let argv): argv.map(shellQuote).joined(separator: " ")
+        case .shell(let script): script
+        case .trash(let urls): urls.map(\.path).joined(separator: "\n")
+        case .truncate(let url): url.path
+        case .unloadLoginItem(let label, let plist): "launchctl bootout gui/\(getuid())/\(label)\n\(plist.path)"
+        case .copyToTerminal(let command): command
+        }
+    }
+}
+
+public struct Step: Sendable, Identifiable, Equatable {
+    public var id: UUID
+    public var title: String
+    public var kind: StepKind
+    public var expectedBytes: Int64
+    public var itemID: String?
+
+    public init(_ title: String, _ kind: StepKind, bytes: Int64 = 0, itemID: String? = nil) {
+        self.id = UUID()
+        self.title = title
+        self.kind = kind
+        self.expectedBytes = bytes
+        self.itemID = itemID
+    }
+}
+
+public struct Refusal: Sendable, Equatable {
+    public var itemID: String
+    public var reason: String
+
+    public init(itemID: String, reason: String) {
+        self.itemID = itemID
+        self.reason = reason
+    }
+}
+
+public struct Plan: Sendable {
+    public var steps: [Step]
+    public var warnings: [String]
+    public var refusals: [Refusal]
+
+    public init(steps: [Step] = [], warnings: [String] = [], refusals: [Refusal] = []) {
+        self.steps = steps
+        self.warnings = warnings
+        self.refusals = refusals
+    }
+
+    public var expectedBytes: Int64 { steps.reduce(0) { $0 + $1.expectedBytes } }
+
+    public mutating func append(_ other: Plan) {
+        steps += other.steps
+        warnings += other.warnings
+        refusals += other.refusals
+    }
+}
+
+/// A whole-tool action offered beside the item list, like "Uninstall RVM completely".
+/// Its id is passed to `Provider.plan` like an item id.
+public struct ProviderAction: Sendable, Identifiable, Equatable {
+    public var id: String
+    public var title: String
+    public var itemIDs: [String]
+
+    public init(id: String, title: String, itemIDs: [String]) {
+        self.id = id
+        self.title = title
+        self.itemIDs = itemIDs
+    }
+}
