@@ -68,7 +68,10 @@ struct Sidebar: View {
                         HStack {
                             Text(section.rawValue)
                             Spacer()
-                            Text(formatBytes(rows.reduce(0) { $0 + ($1.bytes ?? 0) })).monospacedDigit()
+                            // Nothing measured yet (Large files before it's started): no total rather than "Zero KB".
+                            if rows.contains(where: { $0.bytes != nil }) {
+                                Text(formatBytes(rows.reduce(0) { $0 + ($1.bytes ?? 0) })).monospacedDigit()
+                            }
                         }
                     }
                 }

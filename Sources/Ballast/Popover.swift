@@ -42,8 +42,17 @@ struct Popover: View {
         VStack(alignment: .leading, spacing: 4) {
             ProgressView(value: 1 - model.freeFraction)
                 .tint(model.freeFraction < 0.1 ? .red : model.freeFraction < 0.2 ? .orange : .accentColor)
-            Text("\(formatBytes(model.free)) free of \(formatBytes(model.total))")
-                .font(.callout).monospacedDigit()
+            HStack {
+                Text("\(formatBytes(model.free)) free of \(formatBytes(model.total))")
+                    .font(.callout).monospacedDigit()
+                Spacer()
+                // Here rather than in the footer, which has no room for it next to the buttons.
+                if model.scanning {
+                    Text("Scanning…").font(.caption).foregroundStyle(.secondary)
+                } else if let at = model.summary?.scannedAt {
+                    Text("Scanned \(relativeScanTime(at, now: Date()))").font(.caption).foregroundStyle(.secondary)
+                }
+            }
         }
     }
 
@@ -62,12 +71,7 @@ struct Popover: View {
 
     var footer: some View {
         HStack {
-            if model.scanning {
-                ProgressView().controlSize(.small)
-                Text("Scanning…").font(.caption).foregroundStyle(.secondary)
-            } else if let at = model.summary?.scannedAt {
-                Text("Scanned \(relativeScanTime(at, now: Date()))").font(.caption).foregroundStyle(.secondary)
-            }
+            if model.scanning { ProgressView().controlSize(.small) }
             Spacer()
             Button("Scan now") { Task { await model.scanNow() } }.disabled(model.scanning)
             Button("Open Ballast") { open(nil) }

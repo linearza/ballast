@@ -21,7 +21,7 @@ import UserNotifications
     /// Shown when macOS blocked Ballast from a protected folder.
     var permission: PermissionProblemInfo?
     var measuring: Set<String> = []
-    let prefs = Preferences()
+    let prefs: Preferences
     let updates = UpdateCheck()
     /// Shows the "Where are your projects?" sheet.
     var firstRun = false
@@ -35,7 +35,13 @@ import UserNotifications
     static let shared = AppModel()
 
     private init() {
-        Task { await launch() }
+        if let dir = Screenshots.directory {
+            prefs = Preferences(defaults: Screenshots.defaults)
+            Task { await Screenshots.capture(self, to: dir) }
+        } else {
+            prefs = Preferences()
+            Task { await launch() }
+        }
     }
 
     var env: Environment { .live(projectRoots: prefs.rootURLs) }

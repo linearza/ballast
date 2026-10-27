@@ -54,6 +54,7 @@ struct SettingsView: View {
     var enabled: Bool { status == .enabled }
 
     var note: String? {
+        if Screenshots.directory != nil { return nil }
         if let error { return error }
         switch status {
         case .requiresApproval: return "Waiting for approval in System Settings → General → Login Items."

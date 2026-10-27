@@ -3,7 +3,7 @@ import Foundation
 
 /// Settings kept in UserDefaults.
 @MainActor @Observable final class Preferences {
-    private let defaults = UserDefaults.standard
+    private let defaults: UserDefaults
 
     /// Project roots as paths. Empty until the first run detects and confirms them.
     var projectRoots: [String] {
@@ -29,7 +29,8 @@ import Foundation
         didSet { defaults.set(hadFullDiskAccess, forKey: "hadFullDiskAccess") }
     }
 
-    init() {
+    init(defaults: UserDefaults = .standard) {
+        self.defaults = defaults
         defaults.register(defaults: ["rescanHours": 24, "lowSpacePercent": 10, "idleDays": 60])
         projectRoots = defaults.stringArray(forKey: "projectRoots") ?? []
         rescanHours = defaults.integer(forKey: "rescanHours")

@@ -11,6 +11,16 @@ public struct Summary: Codable, Sendable, Equatable {
         public var id, title, symbol: String
         public var bytes, reclaimable: Int64
     }
+
+    /// The non-empty concerns, biggest first.
+    public init(reports: [ConcernReport], freeBytes: Int64, totalBytes: Int64, scannedAt: Date) {
+        self.scannedAt = scannedAt
+        self.freeBytes = freeBytes
+        self.totalBytes = totalBytes
+        concerns = reports.filter { !$0.items.isEmpty }
+            .map { Entry(id: $0.id, title: $0.title, symbol: $0.symbol, bytes: $0.total, reclaimable: $0.reclaimable) }
+            .sorted { $0.bytes > $1.bytes }
+    }
 }
 
 /// Runs providers and keeps the summary on disk. Reports belong to the caller.
@@ -63,11 +73,7 @@ public actor DiskScanner {
 
     func writeSummary(_ reports: [ConcernReport]) {
         let space = freeSpace()
-        let summary = Summary(
-            scannedAt: env.now(), freeBytes: space.free, totalBytes: space.total,
-            concerns: reports.filter { !$0.items.isEmpty }
-                .map { Summary.Entry(id: $0.id, title: $0.title, symbol: $0.symbol, bytes: $0.total, reclaimable: $0.reclaimable) }
-                .sorted { $0.bytes > $1.bytes })
+        let summary = Summary(reports: reports, freeBytes: space.free, totalBytes: space.total, scannedAt: env.now())
         guard let data = try? JSONEncoder().encode(summary) else { return }
         try? FileManager.default.createDirectory(at: summaryURL.deletingLastPathComponent(), withIntermediateDirectories: true)
         try? data.write(to: summaryURL, options: .atomic)

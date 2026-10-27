@@ -2,6 +2,11 @@
 
 A menu bar app for macOS that finds the disk space developer tools leave behind, and gives it back safely.
 
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/main-dark.png">
+  <img src="docs/screenshots/main.png" alt="Ballast's main window listing Ruby versions, with the default and pinned versions marked and three old versions ticked for removal">
+</picture>
+
 Ballast looks at the things that quietly fill a developer's disk and shows what each one is, how big it is, and whether anything still uses it:
 
 - **Developer toolchains:** Ruby, Node and Python versions (rvm, rbenv, asdf, nvm, fnm, pyenv), Homebrew leftovers, Xcode versions, simulators and runtimes, GitHub Actions runners
@@ -15,9 +20,28 @@ Ballast looks at the things that quietly fill a developer's disk and shows what 
 
 The menu bar icon shows free space at a glance. Click it for a summary, or open the main window to review and remove things.
 
+<p align="center">
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/menu-dark.png">
+  <img src="docs/screenshots/menu.png" alt="The Ballast menu: free space, what's safe to reclaim, the biggest concerns and the Trash" width="400">
+</picture>
+</p>
+
+Project leftovers shows which `node_modules` folders belong to projects you haven't touched in a while, and which git worktrees are done with: their pull request is merged and nothing is left uncommitted or unpushed.
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/projects-dark.png">
+  <img src="docs/screenshots/projects.png" alt="Project leftovers: idle node_modules folders and git worktrees, badged with merged or open pull requests and uncommitted changes">
+</picture>
+
 ## Safety
 
 Ballast is built so that cleaning up is hard to regret.
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/confirm-dark.png">
+  <img src="docs/screenshots/confirm.png" alt="The confirmation sheet: every command Ballast will run, with a pinned Ruby version refused">
+</picture>
 
 - **Nothing happens without a preview.** You tick items, then see every step Ballast will take (each path it will move and each command it will run) before you confirm.
 - **It checks again before acting.** Just before running, Ballast re-checks each item. If something changed since the scan (a version is now pinned by a project, a worktree has new changes, a database is running), that step is skipped and the reason is shown.
@@ -67,6 +91,13 @@ Ballast asks where your projects live. It uses those folders to see which langua
 
 ## Settings
 
+<p align="center">
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/settings-dark.png">
+  <img src="docs/screenshots/settings.png" alt="Ballast settings: project folders, background rescans, the low-space warning, node_modules idle time and open at login" width="560">
+</picture>
+</p>
+
 - Project folders
 - How often to rescan in the background: off, every 6 hours or every 24 hours
 - When to warn about low free space (10% by default)
@@ -88,7 +119,10 @@ make test      # run the tests
 make app       # build dist/Ballast.app
 make icon      # re-render Resources/AppIcon.icns
 make release   # universal build and dist/Ballast-<version>.zip
+make screenshots  # re-render docs/screenshots from sample data
 ```
+
+The screenshots use made-up projects and sizes, not anything from the machine that renders them.
 
 The scanning and cleanup logic lives in `Sources/BallastCore` and is tested against fixture folders and a fake command runner. `Sources/Ballast` is the SwiftUI and AppKit app.
 

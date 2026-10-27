@@ -9,7 +9,7 @@ REPO     := $(shell git remote get-url origin 2>/dev/null | sed -nE 's|.*github\
 # macro plugin from clean builds; passing its folder explicitly avoids that.
 TESTING_PLUGINS := $(shell dirname "$$(xcrun -f swift 2>/dev/null)")/../lib/swift/host/plugins/testing
 
-.PHONY: build test app install uninstall release icon check clean
+.PHONY: build test app install uninstall release icon screenshots check clean
 
 check:
 	@swift --version 2>/dev/null | grep -Eq 'Swift version ([6-9]|[1-9][0-9])\.' || { \
@@ -45,6 +45,10 @@ release: check
 	BALLAST_REPO="$(REPO)" scripts/bundle.sh "$$(swift build -c release --arch arm64 --arch x86_64 --show-bin-path)/$(APP)" "$(BUNDLE)" "$(VERSION)"
 	cd $(DIST) && rm -f $(APP)-$(VERSION).zip && ditto -c -k --keepParent $(APP).app $(APP)-$(VERSION).zip
 	@echo "$(DIST)/$(APP)-$(VERSION).zip"
+
+# Renders docs/screenshots from made-up sample data; nothing on this Mac is scanned.
+screenshots: app
+	BALLAST_SCREENSHOTS="$(CURDIR)/docs/screenshots" "$(BUNDLE)/Contents/MacOS/$(APP)" -AppleLocale en_US -AppleLanguages '(en)'
 
 icon:
 	swift scripts/icon.swift Resources/AppIcon.icns
