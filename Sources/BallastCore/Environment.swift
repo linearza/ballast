@@ -10,10 +10,12 @@ public struct Environment: Sendable {
     public var runner: any CommandRunner
     /// Moves a file to the Trash. Tests move it into a folder inside the fixture instead.
     public var trash: @Sendable (URL) throws -> Void
+    /// `/` on a real Mac; the fixture in tests. Holds `usr/local/bin` and `Library`.
+    public var systemRoot: URL
 
     public init(home: URL, brewPrefix: URL?, applications: [URL], projectRoots: [URL],
                 now: @escaping @Sendable () -> Date = { Date() }, runner: any CommandRunner,
-                trash: @escaping @Sendable (URL) throws -> Void) {
+                trash: @escaping @Sendable (URL) throws -> Void, systemRoot: URL = URL(filePath: "/")) {
         self.home = home
         self.brewPrefix = brewPrefix
         self.applications = applications
@@ -21,9 +23,11 @@ public struct Environment: Sendable {
         self.now = now
         self.runner = runner
         self.trash = trash
+        self.systemRoot = systemRoot
     }
 
     public func path(_ rel: String) -> URL { home.appending(path: rel) }
+    public func system(_ rel: String) -> URL { systemRoot.appending(path: rel) }
 }
 
 extension Environment {

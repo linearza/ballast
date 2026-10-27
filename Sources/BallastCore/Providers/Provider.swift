@@ -34,7 +34,7 @@ extension Provider {
 
 public enum Providers {
     public static let all: [any Provider] = [
-        RubyProvider(), NodeProvider(), PythonProvider(), HomebrewProvider(), DatabasesProvider(), LoginItemsProvider(),
+        RubyProvider(), NodeProvider(), PythonProvider(), HomebrewProvider(), DockerProvider(), XcodeProvider(), DatabasesProvider(), LoginItemsProvider(),
     ]
 }
 
@@ -127,4 +127,20 @@ func asdfGlobal(_ env: Environment, tool: String) -> String? {
 func pinBadge(_ pins: Pins, _ map: [String: [String]], installed: String) -> Badge? {
     let by = pins.pinners(of: map, installed: installed)
     return by.isEmpty ? nil : .pinned(by: by)
+}
+
+/// Measures an item whose folders macOS protects. Only called when the user
+/// asks, because reading them can bring up a permission prompt.
+public func measureProtected(_ item: Item) async -> Item {
+    var item = item
+    let m = await measure(item.paths)
+    item.bytes = m.bytes
+    item.sizeIsPartial = m.partial
+    if m.partial && m.bytes == 0 { item.badges.insert(.locked) } else { item.badges.remove(.locked) }
+    return item
+}
+
+/// An item for folders Ballast doesn't read during scans: size unknown until measured.
+func lockedItem(id: String, title: String, detail: String, paths: [URL], risk: Risk) -> Item {
+    Item(id: id, title: title, detail: detail, paths: paths, bytes: 0, sizeIsPartial: true, risk: risk, badges: [.locked])
 }

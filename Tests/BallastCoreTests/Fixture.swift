@@ -118,6 +118,7 @@ extension Fixture {
             trash: { u in
                 try FileManager.default.createDirectory(at: trashDir, withIntermediateDirectories: true)
                 try FileManager.default.moveItem(at: u, to: trashDir.appending(path: "\(UUID().uuidString)-\(u.lastPathComponent)"))
-            })
+            },
+            systemRoot: root)
     }
 }
