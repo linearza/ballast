@@ -38,7 +38,9 @@ import SwiftUI
         return w
     }
 
+    /// Ballast lives in the menu bar, but shows in the Dock and app switcher while one of its windows is open.
     private func bringForward(_ w: NSWindow?) {
+        NSApp.setActivationPolicy(.regular)
         NSApp.activate(ignoringOtherApps: true)
         w?.makeKeyAndOrderFront(nil)
     }
@@ -50,5 +52,6 @@ import SwiftUI
             AppModel.shared.releaseItems()
         }
         if w === settings { settings = nil }
+        if main == nil && settings == nil { NSApp.setActivationPolicy(.accessory) }
     }
 }

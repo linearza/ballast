@@ -29,6 +29,9 @@ install: app
 	@mkdir -p "$(HOME)/Applications"
 	rm -rf "$(DEST)"
 	cp -R "$(BUNDLE)" "$(DEST)"
+	@# Tell Spotlight and Launch Services about the fresh copy right away.
+	@/System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister -f "$(DEST)" || true
+	@mdimport "$(DEST)" || true
 	open "$(DEST)"
 
 uninstall:
