@@ -14,6 +14,13 @@ import UserNotifications
     var trashBytes: Int64?
     /// The concern the main window shows.
     var selection: String?
+    /// Ticked items, per concern.
+    var checked: [String: Set<String>] = [:]
+    /// The confirmation sheet's plan and its run.
+    var run: RunState?
+    /// Shown when macOS blocked Ballast from a protected folder.
+    var permission: PermissionProblemInfo?
+    var measuring: Set<String> = []
     let prefs = Preferences()
 
     @ObservationIgnored private var timer: Timer?
@@ -117,6 +124,51 @@ import UserNotifications
     /// Drops the item lists when the main window closes; the summary stays.
     func releaseItems() {
         reports = []
+    }
+
+    func provider(_ id: String) -> (any Provider)? { Providers.all.first { $0.id == id } }
+    func report(_ id: String) -> ConcernReport? { reports.first { $0.id == id } }
+
+    /// Builds the plan for ticked items (or an extra action) and opens the confirmation sheet.
+    func prepare(concern: String, ids: [String]) async {
+        guard let p = provider(concern), let r = report(concern) else { return }
+        let plan = await p.plan(ids, items: r.items, env: env)
+        run = RunState(provider: p, items: r.items, plan: plan)
+    }
+
+    func execute(_ state: RunState) async {
+        state.phase = .running
+        let before = free
+        let executor = Executor(env: env, logURL: Self.logURL)
+        let results = await executor.run(state.plan, provider: state.provider, items: state.items, pins: scanPins(roots: prefs.rootURLs)) { r in
+            Task { @MainActor in state.outcomes[r.step.id] = r.outcome }
+        }
+        for r in results { state.outcomes[r.step.id] = r.outcome }
+        state.trashed = results.filter { r in
+            if case .trash = r.step.kind, r.outcome == .done { true } else { false }
+        }.reduce(0) { $0 + $1.step.expectedBytes }
+        checked[state.provider.id] = []
+        await scanNow(only: [state.provider.id])
+        state.freed = max(0, free - before)
+        state.phase = .finished
+        if let blocked = results.first(where: { $0.outcome == .failed(Executor.needsFullDiskAccess) }) {
+            permission = PermissionProblemInfo(path: blocked.step.kind.firstPath, forgot: prefs.hadFullDiskAccess)
+        }
+    }
+
+    /// Measures a locked item when the user asks. macOS may ask for access here.
+    func measureLocked(concern: String, item: Item) async {
+        measuring.insert(item.id)
+        defer { measuring.remove(item.id) }
+        let fresh = await measureProtected(item)
+        guard let r = reports.firstIndex(where: { $0.id == concern }),
+              let i = reports[r].items.firstIndex(where: { $0.id == item.id }) else { return }
+        reports[r].items[i] = fresh
+        if fresh.isLocked {
+            permission = PermissionProblemInfo(path: item.paths.first, forgot: prefs.hadFullDiskAccess)
+        } else {
+            prefs.hadFullDiskAccess = true
+        }
     }
 
     /// At most once a day.

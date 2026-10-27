@@ -187,3 +187,18 @@ public struct ProviderAction: Sendable, Identifiable, Equatable {
         self.itemIDs = itemIDs
     }
 }
+
+// MARK: - Selection
+
+/// What "Select safe" picks: regenerable items that nothing uses and whose size is known.
+public func selectSafe(_ items: [Item]) -> Set<String> {
+    Set(items.filter { $0.risk == .regenerable && !$0.inUse && !$0.isLocked }.map(\.id))
+}
+
+/// "Remove 1 item · 1 GB", "Remove 9 items · 6.3 GB".
+public func removeLabel(count: Int, bytes: Int64) -> String {
+    "Remove \(count) \(count == 1 ? "item" : "items") · \(formatBytes(bytes))"
+}
+
+/// `Section` for SwiftUI files, where it clashes with SwiftUI.Section.
+public typealias ConcernSection = Section

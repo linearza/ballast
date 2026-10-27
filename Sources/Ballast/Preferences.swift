@@ -20,6 +20,10 @@ import Foundation
     var rootsConfirmed: Bool {
         didSet { defaults.set(rootsConfirmed, forKey: "rootsConfirmed") }
     }
+    /// Set once measuring a protected folder worked, so a later failure means macOS forgot the grant.
+    var hadFullDiskAccess: Bool {
+        didSet { defaults.set(hadFullDiskAccess, forKey: "hadFullDiskAccess") }
+    }
 
     init() {
         defaults.register(defaults: ["rescanHours": 24, "lowSpacePercent": 10])
@@ -27,6 +31,7 @@ import Foundation
         rescanHours = defaults.integer(forKey: "rescanHours")
         lowSpacePercent = defaults.integer(forKey: "lowSpacePercent")
         rootsConfirmed = defaults.bool(forKey: "rootsConfirmed")
+        hadFullDiskAccess = defaults.bool(forKey: "hadFullDiskAccess")
     }
 
     var rootURLs: [URL] { projectRoots.map { URL(filePath: $0) } }

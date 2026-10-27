@@ -31,7 +31,7 @@ public final class Executor: Sendable {
     let env: Environment
     let logURL: URL
     static let commandTimeout: Duration = .seconds(600)
-    static let needsFullDiskAccess = "Needs Full Disk Access"
+    public static let needsFullDiskAccess = "Needs Full Disk Access"
 
     public init(env: Environment, logURL: URL) {
         self.env = env

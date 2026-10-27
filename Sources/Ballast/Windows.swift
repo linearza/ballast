@@ -10,7 +10,7 @@ import SwiftUI
 
     func showMain(_ model: AppModel) {
         if main == nil {
-            main = window("Ballast", size: NSSize(width: 980, height: 620), resizable: true,
+            main = window("Ballast", size: NSSize(width: 900, height: 600), resizable: true,
                           content: MainWindowRoot(model: model))
             main?.setFrameAutosaveName("BallastMain")
         }
@@ -51,12 +51,6 @@ import SwiftUI
         }
         if w === settings { settings = nil }
     }
-}
-
-/// Placeholders until the main window and settings exist.
-struct MainWindowRoot: View {
-    let model: AppModel
-    var body: some View { Text("Ballast").frame(minWidth: 800, minHeight: 500) }
 }
 
 struct SettingsRoot: View {

@@ -153,4 +153,11 @@ import Testing
         #expect(await RubyProvider().isPresent(f.env()) == false)
         #expect(await NodeProvider().isPresent(f.env()) == false)
     }
+
+    @Test func symlinkedVersionsAreNotItems() async {
+        let f = rvm()
+        f.link(".rvm/rubies/default", to: f.url(".rvm/rubies/ruby-4.0.5").path)
+        let items = await scan(RubyProvider(), f)
+        #expect(!items.contains { $0.id == "ruby.rvm.default" })
+    }
 }

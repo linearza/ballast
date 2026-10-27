@@ -100,11 +100,13 @@ func measured(_ items: [Item]) async -> [Item] {
 }
 
 /// Names of the visible folders inside `url`, sorted.
+/// Real folders inside `url`, skipping hidden ones and symlinks (rvm's `default`, for one).
 func subfolders(_ url: URL) -> [String] {
     let names = (try? FileManager.default.contentsOfDirectory(atPath: url.path)) ?? []
     return names.filter { name in
-        var isDir: ObjCBool = false
-        return !name.hasPrefix(".") && FileManager.default.fileExists(atPath: url.appending(path: name).path, isDirectory: &isDir) && isDir.boolValue
+        guard !name.hasPrefix("."),
+              let attrs = try? FileManager.default.attributesOfItem(atPath: url.appending(path: name).path) else { return false }
+        return attrs[.type] as? FileAttributeType == .typeDirectory
     }.sorted { $0.localizedStandardCompare($1) == .orderedAscending }
 }
 

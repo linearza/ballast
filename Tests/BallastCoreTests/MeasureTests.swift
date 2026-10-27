@@ -78,4 +78,21 @@ import Testing
         #expect(Risk.review.label == "Review")
         #expect(Risk.yourData.label == "Your data")
     }
+
+    @Test func selectSafePicksRegenerableUnused() {
+        let items = [
+            Item(id: "a", title: "a", paths: [], bytes: 1, risk: .regenerable),
+            Item(id: "b", title: "b", paths: [], bytes: 1, risk: .regenerable, badges: [.running]),
+            Item(id: "c", title: "c", paths: [], bytes: 1, risk: .review),
+            Item(id: "d", title: "d", paths: [], bytes: 1, risk: .yourData),
+            Item(id: "e", title: "e", paths: [], bytes: 1, risk: .regenerable, badges: [.mergedPR]),
+        ]
+        #expect(selectSafe(items) == ["a", "e"])
+    }
+
+    @Test func removeLabels() {
+        #expect(removeLabel(count: 1, bytes: 1_000_000_000) == "Remove 1 item · 1 GB")
+        #expect(removeLabel(count: 9, bytes: 6_300_000_000) == "Remove 9 items · \(formatBytes(6_300_000_000))")
+        #expect(formatBytes(6_300_000_000).hasPrefix("6"))
+    }
 }
