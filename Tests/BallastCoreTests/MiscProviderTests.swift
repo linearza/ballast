@@ -115,6 +115,32 @@ import Testing
         #expect(!paths.contains(f.url("Library/Caches/com.example.other").path))
     }
 
+    @Test func appLeftoversSkipOtherAppsWithSimilarIDs() async throws {
+        let f = Fixture()
+        for (name, bid) in [("Code", "com.example.code"), ("Code Insiders", "com.example.codeInsiders"), ("Code Canary", "com.example.code.canary")] {
+            f.file("Applications/\(name).app/Contents/Info.plist", contents: """
+            <?xml version="1.0" encoding="UTF-8"?>
+            <plist version="1.0"><dict><key>CFBundleIdentifier</key><string>\(bid)</string></dict></plist>
+            """)
+        }
+        f.file("Library/Caches/com.example.code/data", bytes: 10)
+        f.file("Library/Containers/com.example.code.helper/data", bytes: 10)
+        f.file("Library/Group Containers/ABCDE12345.com.example.code/data", bytes: 10)
+        f.file("Library/Caches/com.example.codeInsiders/data", bytes: 10)
+        f.file("Library/Preferences/com.example.code.canary.plist", bytes: 10)
+        let env = f.env()
+        let p = AppsProvider()
+        let items = await p.scan(env, pins: Pins())
+        let app = try #require(items.first { $0.title == "Code" })
+        let plan = await p.plan([app.id], items: items, env: env)
+        let paths = plan.steps.flatMap { step -> [URL] in if case .trash(let u) = step.kind { u } else { [] } }.map(\.path)
+        #expect(paths.contains(f.url("Library/Caches/com.example.code").path))
+        #expect(paths.contains(f.url("Library/Containers/com.example.code.helper").path))
+        #expect(paths.contains(f.url("Library/Group Containers/ABCDE12345.com.example.code").path))
+        #expect(!paths.contains(f.url("Library/Caches/com.example.codeInsiders").path))
+        #expect(!paths.contains(f.url("Library/Preferences/com.example.code.canary.plist").path))
+    }
+
     @Test func appleAppsHaveNoPlan() async throws {
         let f = Fixture()
         f.file("Applications/Safari.app/Contents/Info.plist", contents: """

@@ -45,12 +45,26 @@ public struct AppsProvider: Provider {
     }
 
     /// Files in ~/Library named after the bundle id.
-    func leftovers(_ bundleID: String, env: Environment) -> [URL] {
-        Self.leftoverDirs.flatMap { rel -> [URL] in
+    /// Library entries named after `bundleID`, leaving out ones that belong to another installed app
+    /// whose id is longer (com.google.Chrome.canary when removing com.google.Chrome).
+    func leftovers(_ bundleID: String, otherIDs: [String], env: Environment) -> [URL] {
+        let others = otherIDs.filter { $0 != bundleID && $0.count > bundleID.count }
+        return Self.leftoverDirs.flatMap { rel -> [URL] in
             let dir = env.path("Library/\(rel)")
             let names = (try? FileManager.default.contentsOfDirectory(atPath: dir.path)) ?? []
-            return names.filter { $0.contains(bundleID) }.sorted().map { dir.appending(path: $0) }
+            return names.filter { name in
+                Self.named(name, after: bundleID) && !others.contains { Self.named(name, after: $0) }
+            }.sorted().map { dir.appending(path: $0) }
         }
+    }
+
+    /// `com.x.app`, `com.x.app.plist`, `com.x.app.helper` or `TEAMID.com.x.app`, but not `com.x.appBeta`.
+    static func named(_ name: String, after bundleID: String) -> Bool {
+        var stem = name
+        for ext in [".plist", ".savedState", ".binarycookies"] where stem.hasSuffix(ext) {
+            stem = String(stem.dropLast(ext.count))
+        }
+        return stem == bundleID || stem.hasPrefix(bundleID + ".") || stem.hasSuffix("." + bundleID)
     }
 
     public func plan(_ ids: [String], items: [Item], env: Environment) async -> Plan {
@@ -65,7 +79,7 @@ public struct AppsProvider: Provider {
             if let w = inUseWarning(item, noun: "app") { plan.warnings.append(w) }
             plan.steps.append(Step("Move \(item.title) to the Trash", .trash([app]), bytes: item.bytes, itemID: id))
             guard let bid else { continue }
-            let found = leftovers(bid, env: env)
+            let found = leftovers(bid, otherIDs: items.compactMap(\.detail), env: env)
             if !found.isEmpty {
                 // Containers aren't measured: reading them can bring up a permission prompt.
                 let readable = found.filter { !$0.path.contains("/Containers/") }
