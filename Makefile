@@ -52,6 +52,7 @@ screenshots: app
 
 icon:
 	swift scripts/icon.swift Resources/AppIcon.icns
+	sips -s format png -Z 256 Resources/AppIcon.icns --out docs/icon.png >/dev/null
 
 clean:
 	rm -rf .build $(DIST)

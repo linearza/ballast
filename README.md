@@ -1,6 +1,10 @@
-# Ballast
+<p align="center">
+  <img src="docs/icon.png" width="128" height="128" alt="Ballast icon">
+</p>
 
-A menu bar app for macOS that finds the disk space developer tools leave behind, and gives it back safely.
+<h1 align="center">Ballast</h1>
+
+<p align="center">A menu bar app for macOS that finds the disk space developer tools leave behind, and gives it back safely.</p>
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/main-dark.png">
