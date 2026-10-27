@@ -1,5 +1,22 @@
 # Changelog
 
+## 0.1.1 — 2026-10-27
+
+Fixes from a security and feature review.
+
+- Ollama: a model manifest can only point at files inside Ollama's own blobs folder.
+- Databases started without `brew services` (with `pg_ctl` or `mysqld`) now count as running, so Ballast won't remove their data.
+- Login items whose program is on a disk that isn't plugged in are no longer listed as leftovers.
+- Apps installed for all users, such as App Store apps and Xcode, now say to move them to the Trash in Finder. Before, Ballast wrongly asked for Full Disk Access.
+- When one step for an item fails, its later steps are skipped, so an app's settings stay if the app itself couldn't be removed.
+- Apple's App Store apps (Pages, Numbers, Keynote) can be removed. Apps that ship with macOS still can't.
+- "RVM downloads and sources" now runs `rvm cleanup archives` and `rvm cleanup sources` instead of `rvm cleanup all`, which also removed gem sets and logs.
+- Git worktrees that use relative paths (`worktree.useRelativePaths`) are found again.
+- Pressing Remove twice no longer runs the plan twice.
+- The update check only links to release pages on github.com.
+- mise: Node, Ruby and Python versions installed with mise, with mise's global version as the default and `mise.toml` pins respected.
+- Xcode and Docker Desktop show when they're running, with a warning before removing them.
+
 ## 0.1.0 — 2026-10-27
 
 First release.

@@ -11,7 +11,7 @@ import Foundation
     let current = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? BallastCore.version
 
     init() {
-        if let v = defaults.string(forKey: "latestVersion"), let u = defaults.url(forKey: "latestURL") { offer(v, u) }
+        if let v = defaults.string(forKey: "latestVersion"), let u = defaults.url(forKey: "latestURL").flatMap({ releaseLink($0.absoluteString) }) { offer(v, u) }
     }
 
     func check() async {
@@ -26,7 +26,7 @@ import Foundation
               (response as? HTTPURLResponse)?.statusCode == 200,
               let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
               let tag = json["tag_name"] as? String,
-              let url = (json["html_url"] as? String).flatMap(URL.init(string:)) else { return }
+              let url = (json["html_url"] as? String).flatMap(releaseLink) else { return }
         let version = tag.hasPrefix("v") ? String(tag.dropFirst()) : tag
         defaults.set(version, forKey: "latestVersion")
         defaults.set(url, forKey: "latestURL")

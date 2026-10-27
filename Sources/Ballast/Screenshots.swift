@@ -132,7 +132,7 @@ import SwiftUI
         let plan = Plan(steps: [
             Step("Remove Ruby 2.7.8", .shell("\(source) && rvm remove ruby-2.7.8 --gems"), bytes: byID["ruby.rvm.2.7.8"]!.bytes, itemID: "ruby.rvm.2.7.8"),
             Step("Remove Ruby 3.0.6", .shell("\(source) && rvm remove ruby-3.0.6 --gems"), bytes: byID["ruby.rvm.3.0.6"]!.bytes, itemID: "ruby.rvm.3.0.6"),
-            Step("Remove RVM downloads and sources", .shell("\(source) && rvm cleanup all"), bytes: byID["ruby.rvm.downloads"]!.bytes, itemID: "ruby.rvm.downloads"),
+            Step("Remove RVM downloads and sources", .shell("\(source) && rvm cleanup archives && rvm cleanup sources"), bytes: byID["ruby.rvm.downloads"]!.bytes, itemID: "ruby.rvm.downloads"),
         ], refusals: [Refusal(itemID: "ruby.rvm.3.2.2", reason: "Pinned by billing-api")])
         return RunState(provider: model.provider("ruby")!, items: items, plan: plan)
     }

@@ -1,6 +1,6 @@
 import Foundation
 
-/// Ruby versions from RVM, rbenv and asdf, each with its gems.
+/// Ruby versions from RVM, rbenv, asdf and mise, each with its gems.
 public struct RubyProvider: Provider {
     public init() {}
     public let id = "ruby"
@@ -12,6 +12,7 @@ public struct RubyProvider: Provider {
 
     public func isPresent(_ env: Environment) async -> Bool {
         [".rvm/rubies", ".rbenv/versions", ".asdf/installs/ruby"].contains { exists(env.path($0)) }
+            || exists(miseInstalls(env, tool: "ruby"))
     }
 
     public func scan(_ env: Environment, pins: Pins) async -> [Item] {
@@ -46,18 +47,20 @@ public struct RubyProvider: Provider {
                               paths: [rvm.appending(path: "backup")], bytes: 0, risk: .review))
         }
 
-        // rbenv and asdf keep one folder per version; gems live inside it.
-        let managers: [(key: String, dir: String, def: String?)] = [
-            ("rbenv", ".rbenv/versions", firstLine(env.path(".rbenv/version"))),
-            ("asdf", ".asdf/installs/ruby", asdfGlobal(env, tool: "ruby")),
+        // rbenv, asdf and mise keep one folder per version; gems live inside it.
+        let mise = miseInstalls(env, tool: "ruby")
+        let managers: [(key: String, dir: URL, def: String?)] = [
+            ("rbenv", env.path(".rbenv/versions"), firstLine(env.path(".rbenv/version"))),
+            ("asdf", env.path(".asdf/installs/ruby"), asdfGlobal(env, tool: "ruby")),
+            ("mise", mise, miseGlobal(env, tools: ["ruby"], installed: subfolders(mise))),
         ]
         for m in managers {
-            for version in subfolders(env.path(m.dir)) {
+            for version in subfolders(m.dir) {
                 var badges = Set<Badge>()
                 if m.def == version { badges.insert(.isDefault) }
                 if let pin = pinBadge(pins, pins.ruby, installed: version) { badges.insert(pin) }
                 items.append(Item(id: "ruby.\(m.key).\(version)", title: "Ruby \(version)", detail: "\(m.key) · with gems",
-                                  paths: [env.path("\(m.dir)/\(version)")], bytes: 0, risk: .regenerable, badges: badges))
+                                  paths: [m.dir.appending(path: version)], bytes: 0, risk: .regenerable, badges: badges))
             }
         }
         return await measured(items)
@@ -82,12 +85,13 @@ public struct RubyProvider: Provider {
             let manager = parts[1], version = parts.count > 2 ? parts[2] : ""
             let kind: StepKind
             switch (manager, version) {
-            case ("rvm", "downloads"): kind = .shell("\(source) && rvm cleanup all")
+            case ("rvm", "downloads"): kind = .shell("\(source) && rvm cleanup archives && rvm cleanup sources")
             case ("rvm", "backup"): kind = .trash(item.paths)
             case ("rvm", _):
                 let name = item.paths.first?.lastPathComponent ?? "ruby-\(version)"
                 kind = .shell("\(source) && rvm remove \(shellQuote(name)) --gems")
             case ("rbenv", _): kind = .command(argv: ["rbenv", "uninstall", "-f", version])
+            case ("mise", _): kind = .command(argv: ["mise", "uninstall", "ruby@\(version)"])
             default: kind = .command(argv: ["asdf", "uninstall", "ruby", version])
             }
             return [Step("Remove \(item.title)", kind, bytes: item.bytes, itemID: item.id)]

@@ -72,7 +72,8 @@ public struct AppsProvider: Provider {
         for id in ids {
             guard let item = items.first(where: { $0.id == id }), let app = item.paths.first else { continue }
             let bid = item.detail
-            if bid?.hasPrefix("com.apple.") == true {
+            // Apple's App Store apps (Pages, Numbers, Keynote) carry a receipt and can go; the rest ship with macOS.
+            if bid?.hasPrefix("com.apple.") == true, !exists(app.appending(path: "Contents/_MASReceipt")) {
                 plan.refusals.append(Refusal(itemID: id, reason: "Part of macOS"))
                 continue
             }

@@ -164,6 +164,8 @@ import UserNotifications
     }
 
     func execute(_ state: RunState) async {
+        // A double-click or a second Return must not run the plan twice.
+        guard state.phase == .confirm else { return }
         state.phase = .running
         let before = free
         let executor = Executor(env: env, logURL: Self.logURL)

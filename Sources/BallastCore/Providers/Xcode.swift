@@ -38,6 +38,7 @@ public struct XcodeProvider: Provider {
         for x in xcodes(env) {
             var badges = Set<Badge>()
             if !selected.isEmpty, (selected + "/").hasPrefix(x.url.path + "/") { badges.insert(.selectedByXcodeSelect) }
+            if isAppRunning(x.url) { badges.insert(.running) }
             items.append(Item(id: "xcode.app.\(x.url.lastPathComponent)", title: "Xcode \(x.version)".trimmingCharacters(in: .whitespaces),
                               detail: x.url.path, paths: [x.url], bytes: 0, risk: .review, badges: badges))
         }

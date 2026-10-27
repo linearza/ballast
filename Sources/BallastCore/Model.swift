@@ -1,7 +1,7 @@
 import Foundation
 
 public enum BallastCore {
-    public static let version = "0.1.0"
+    public static let version = "0.1.1"
 }
 
 /// How safe an item is to remove.
@@ -217,4 +217,10 @@ public func compareVersions(_ a: String, _ b: String) -> ComparisonResult {
         if l != r { return l < r ? .orderedAscending : .orderedDescending }
     }
     return .orderedSame
+}
+
+/// A release page link from GitHub's API, kept only when it points at github.com over https.
+public func releaseLink(_ s: String) -> URL? {
+    guard let url = URL(string: s), url.scheme == "https", url.host == "github.com" else { return nil }
+    return url
 }

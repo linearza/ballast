@@ -19,7 +19,7 @@ public struct LoginItemsProvider: Provider {
             guard let data = try? Data(contentsOf: url),
                   let plist = try? PropertyListSerialization.propertyList(from: data, format: nil) as? [String: Any] else { continue }
             let program = plist["Program"] as? String ?? (plist["ProgramArguments"] as? [String])?.first
-            guard let program, program.hasPrefix("/"), !exists(URL(filePath: program)) else { continue }
+            guard let program, program.hasPrefix("/"), !exists(URL(filePath: program)), !onUnmountedVolume(program) else { continue }
             let label = plist["Label"] as? String ?? (name as NSString).deletingPathExtension
             let detail = label.hasPrefix("homebrew.mxcl.")
                 ? "Homebrew service for \(label.dropFirst("homebrew.mxcl.".count)), which is no longer installed"
@@ -28,6 +28,13 @@ public struct LoginItemsProvider: Provider {
             items.append(Item(id: "login.\(label)", title: label, detail: detail, paths: [url], bytes: size.bytes, risk: .regenerable))
         }
         return items
+    }
+
+    /// `/Volumes/<disk>/…` when that disk isn't plugged in: the program may be fine, just not here right now.
+    func onUnmountedVolume(_ program: String) -> Bool {
+        let parts = program.split(separator: "/")
+        guard parts.count > 1, parts[0] == "Volumes" else { return false }
+        return !exists(URL(filePath: "/Volumes/\(parts[1])"))
     }
 
     public func plan(_ ids: [String], items: [Item], env: Environment) async -> Plan {
