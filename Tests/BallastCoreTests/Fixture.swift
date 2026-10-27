@@ -62,3 +62,62 @@ final class Fixture: @unchecked Sendable {
         return u
     }
 }
+
+/// Answers commands from a table. Unknown commands fail with status 127.
+/// Programs named in `passthrough` run for real (e.g. git against fixture repos).
+final class FakeRunner: CommandRunner, @unchecked Sendable {
+    private let lock = NSLock()
+    private var _calls: [String] = []
+    var responses: [String: CommandResult]
+    var tools: Set<String>
+    let passthrough: Set<String>
+
+    init(_ responses: [String: CommandResult] = [:], tools: Set<String> = [], passthrough: Set<String> = []) {
+        self.responses = responses
+        self.tools = tools
+        self.passthrough = passthrough
+    }
+
+    var calls: [String] { lock.withLock { _calls } }
+
+    func run(_ argv: [String], timeout: Duration) async -> CommandResult {
+        if let first = argv.first, passthrough.contains(first) {
+            return await ProcessRunner().run(argv, timeout: timeout)
+        }
+        return answer(argv.joined(separator: " "))
+    }
+
+    func shell(_ script: String, timeout: Duration) async -> CommandResult { answer(script) }
+
+    func which(_ tool: String) async -> URL? {
+        if passthrough.contains(tool) { return await ProcessRunner().which(tool) }
+        return tools.contains(tool) ? URL(filePath: "/usr/local/bin/\(tool)") : nil
+    }
+
+    private func answer(_ key: String) -> CommandResult {
+        lock.withLock { _calls.append(key) }
+        return responses[key] ?? CommandResult(status: 127, stderr: "not found")
+    }
+
+    static let ok = CommandResult(status: 0)
+    static func out(_ s: String) -> CommandResult { CommandResult(status: 0, stdout: s) }
+}
+
+extension Fixture {
+    /// An environment rooted at this fixture: home is the fixture, Homebrew lives in `opt/homebrew`.
+    func env(runner: any CommandRunner = FakeRunner(), now: Date = Date(), roots: [String] = ["Projects"]) -> Environment {
+        let trashDir = url(".Trash")
+        let brew = url("opt/homebrew")
+        return Environment(
+            home: root,
+            brewPrefix: FileManager.default.fileExists(atPath: brew.path) ? brew : nil,
+            applications: [url("Applications")],
+            projectRoots: roots.map { url($0) },
+            now: { now },
+            runner: runner,
+            trash: { u in
+                try FileManager.default.createDirectory(at: trashDir, withIntermediateDirectories: true)
+                try FileManager.default.moveItem(at: u, to: trashDir.appending(path: "\(UUID().uuidString)-\(u.lastPathComponent)"))
+            })
+    }
+}

@@ -25,3 +25,20 @@ public struct Environment: Sendable {
 
     public func path(_ rel: String) -> URL { home.appending(path: rel) }
 }
+
+extension Environment {
+    /// The real Mac: your home folder, Homebrew wherever it's installed, the real Trash.
+    public static func live(projectRoots: [URL]) -> Environment {
+        let fm = FileManager.default
+        let home = fm.homeDirectoryForCurrentUser
+        let brew = ["/opt/homebrew", "/usr/local"].map { URL(filePath: $0) }
+            .first { fm.isExecutableFile(atPath: $0.appending(path: "bin/brew").path) }
+        return Environment(
+            home: home,
+            brewPrefix: brew,
+            applications: [URL(filePath: "/Applications"), home.appending(path: "Applications")],
+            projectRoots: projectRoots,
+            runner: ProcessRunner(),
+            trash: { url in try FileManager.default.trashItem(at: url, resultingItemURL: nil) })
+    }
+}
