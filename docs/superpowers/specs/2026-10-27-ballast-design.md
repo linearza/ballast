@@ -25,7 +25,8 @@ Ballast does that work in one place.
 - A generic duplicate-file finder or treemap of the whole disk.
 - Cleaning macOS system areas (SIP-protected locations, `/System`, OS update snapshots). These are explained, not touched.
 - A privileged helper. Steps that need `sudo` are shown as a command to copy and run in Terminal.
-- App Store distribution or notarisation. It's built for personal use and signed ad hoc (see Decisions).
+- App Store distribution, Developer ID signing or notarisation (no developer account). See Distribution.
+- Auto-updating. Ballast only says when a newer version exists.
 
 ## Anti-goals (a failure even if it works)
 
@@ -66,7 +67,7 @@ Ballast does that work in one place.
 - **Locked items:** where Ballast couldn't look without permission, it says so ("Locked: macOS protects this folder. Measure…"). It never guesses those sizes.
 
 ### Settings
-- Project roots (default `~/Projects`), used for pins and project leftovers.
+- Project roots, used for pins and project leftovers. On first run they're detected (folders in the home directory holding several git repos, e.g. `~/Projects`, `~/code`, `~/dev`, `~/src`) and confirmed by the user.
 - Background rescan interval (off, 6 h or 24 h; default 24 h).
 - Low-space notification threshold (default 10% free).
 - Launch at login.
@@ -121,10 +122,31 @@ Leftover login items are found as `~/Library/LaunchAgents/*.plist` whose program
 - **Execution:** sequential, one plan at a time, with live progress. After a run, the affected concerns are rescanned and the real amount freed is shown.
 - **History:** every run is written to `~/Library/Logs/Ballast/actions.log`, with time, step, command and result.
 
+## Distribution
+
+Shareable with other developers, unsigned. The user decided this; there's no Apple Developer account.
+
+- **Primary install is from source:**
+  ```sh
+  git clone https://github.com/<owner>/ballast && cd ballast && make install
+  ```
+  It builds for the local architecture and installs to `~/Applications/Ballast.app`. Apps built locally carry no quarantine flag, so they open without Gatekeeper prompts.
+  - `make uninstall` removes the app, its login item and `~/Library/Application Support/Ballast`.
+  - `make` checks for Swift 6 or newer and explains the Command Line Tools install if it's missing.
+- **Secondary install from a GitHub Release:** a universal (arm64 + x86_64) zip of the app, built by `make release`. The README explains the first open: System Settings → Privacy & Security → Open Anyway, or `xattr -dr com.apple.quarantine`.
+- **Permission grants after updates:** with an ad-hoc signature, a rebuild or update makes macOS forget Full Disk Access. Ballast detects a lost grant at the moment it's needed and says so, rather than failing silently.
+- **Update check:** at most once a day, against the GitHub Releases API, shown as a line in Settings and the popover. It's off when no remote repo is configured.
+- **Nothing tied to one machine:**
+  - No hard-coded user paths.
+  - Every tool is optional and detected.
+  - Homebrew is found at `/opt/homebrew` or `/usr/local`.
+- **Repo contents:** `README.md` (what it does, install, permissions, safety model), `LICENSE` (MIT), `CHANGELOG.md`.
+
 ## Decisions (made by the builder; open to change)
 
 - **Name:** Ballast.
-- **Distribution:** personal use. Built with SwiftPM and the Command Line Tools for Xcode 27. The installed 16.1 tools fail to build any Swift package because stale `.private.swiftinterface` files from an older install are left in `ManifestAPI`. A clean reinstall of the tools is a prerequisite. A script assembles `Ballast.app` (`LSUIElement`, no Dock icon), signs it ad hoc and copies it to `~/Applications`. No Xcode project and no notarisation.
+- **Toolchain:** built with SwiftPM and the Command Line Tools for Xcode 27. The installed 16.1 tools fail to build any Swift package because stale `.private.swiftinterface` files from an older install are left in `ManifestAPI`. A clean reinstall of the tools is a prerequisite. No Xcode project. A script assembles `Ballast.app` (`LSUIElement`, no Dock icon) and signs it ad hoc.
+- **Licence:** MIT.
 - **Platform:** minimum macOS 14 (Observation, `MenuBarExtra(.window)`, `SMAppService`).
 - **Swift package targets:**
   - `BallastCore`: providers, measuring, in-use detection, plans. No UI.
