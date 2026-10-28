@@ -59,14 +59,14 @@ import Testing
         #expect(plan.warnings.isEmpty)
     }
 
-    @Test func planRefusesNothingButWarnsInUse() async {
+    @Test func planRefusesNothingButFlagsInUse() async {
         let f = rvm()
         let items = await scan(RubyProvider(), f)
         let plan = await RubyProvider().plan(["ruby.rvm.4.0.5", "ruby.rvm.3.1.2"], items: items, env: f.env())
         #expect(plan.refusals.isEmpty)
         #expect(plan.steps.count == 2)
-        #expect(plan.warnings.contains { $0.contains("default") })
-        #expect(plan.warnings.contains { $0.contains("pilatsee") })
+        #expect(plan.dangers.contains { $0.contains("default") })
+        #expect(plan.dangers.contains { $0.contains("pilatsee") })
     }
 
     @Test func rvmImplodeAction() async throws {
@@ -77,7 +77,7 @@ import Testing
         let plan = await RubyProvider().plan([action.id], items: items, env: f.env())
         guard case .shell(let script) = plan.steps.first?.kind else { Issue.record("not a shell step"); return }
         #expect(script.contains("rvm implode --force"))
-        #expect(plan.warnings.contains { $0.contains("every Ruby") })
+        #expect(plan.dangers.contains { $0.contains("every Ruby") })
         #expect(plan.expectedBytes >= items.reduce(0) { $0 + $1.bytes })
     }
 

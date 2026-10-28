@@ -127,7 +127,7 @@ public struct EditorsProvider: Provider {
                 plan.refusals.append(Refusal(itemID: item.id, reason: "The app is open. Quit it first"))
                 continue
             }
-            if item.risk == .yourData { plan.warnings.append("\(item.title) can't be recovered once the Trash is emptied.") }
+            if item.risk == .yourData { plan.dangers.append("\(item.title) can't be recovered once the Trash is emptied.") }
             plan.steps.append(Step("Move \(item.title) to the Trash", .trash(item.paths), bytes: item.bytes, itemID: item.id))
         }
         return plan

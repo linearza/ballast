@@ -17,7 +17,7 @@ public struct ProjectLeftoversProvider: Provider {
 
     public func scan(_ env: Environment, pins: Pins) async -> [Item] {
         var items: [Item] = []
-        for found in buildOutput(env.projectRoots) {
+        for found in buildOutput(env.projectRoots) where await !isTracked(found.url, env: env) {
             items.append(await buildItem(found.url, kind: found.kind, env: env))
         }
         for repo in repos(env.projectRoots) {
@@ -87,6 +87,13 @@ public struct ProjectLeftoversProvider: Provider {
         }
         roots.forEach { visit($0, depth: 1) }
         return found
+    }
+
+    /// A folder git tracks files in is part of the project (some teams commit Pods or dist), not a leftover.
+    func isTracked(_ folder: URL, env: Environment) async -> Bool {
+        let r = await env.runner.run(["git", "-C", folder.deletingLastPathComponent().path, "ls-files", "--", folder.lastPathComponent],
+                                     timeout: .seconds(10))
+        return r.ok && !r.stdout.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
 
     func buildItem(_ url: URL, kind: BuildKind, env: Environment) async -> Item {
@@ -204,7 +211,7 @@ public struct ProjectLeftoversProvider: Provider {
                 plan.refusals.append(Refusal(itemID: id, reason: "Has uncommitted changes"))
                 continue
             }
-            if let w = inUseWarning(item, noun: "worktree") { plan.warnings.append(w) }
+            if let w = inUseWarning(item, noun: "worktree") { plan.dangers.append(w) }
             guard let repo = mainRepo(of: path) else {
                 plan.refusals.append(Refusal(itemID: id, reason: "Can't find the repository this worktree belongs to"))
                 continue

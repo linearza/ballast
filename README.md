@@ -51,11 +51,14 @@ Ballast is built so that cleaning up is hard to regret.
 
 - **Nothing happens without a preview.** You tick items, then see every step Ballast will take (each path it will move and each command it will run) before you confirm.
 - **It checks again before acting.** Just before running, Ballast re-checks each item. If something changed since the scan (a version is now pinned by a project, a worktree has new changes, a database is running), that step is skipped and the reason is shown.
-- **Files go to the Trash,** not straight to deletion, so you can put them back.
+- **Each step says whether it can be undone.** Files go to the Trash, so you can put them back. Commands a tool runs for itself (`brew uninstall`, `docker image rm` and the like) delete for good, and the step says so.
+- **The more it matters, the more Ballast asks.** Routine clean-ups confirm with Return. Anything that needs a look (a *Review* item or a warning) needs a click on Remove. Anything that can lose your work (your data, a version a project pins or you use by default, a Docker volume, an app's saved data, a database's files) lists what's at stake under **Read this first**, and Remove stays off until you tick **I understand**.
+- **Some folders are never removed,** whatever a scan finds: your home folder and its Documents, Desktop, Downloads, Library and the like, your SSH and GPG keys and Keychains, and macOS's own folders.
+- **Build folders your project commits to git** (a checked-in `Pods` or `dist`) are source, not leftovers, and aren't offered.
 - **Tools clean up their own data.** Where a tool has its own way to remove something (`brew uninstall`, `docker image rm`, `ollama rm`, `git worktree remove`, `xcrun simctl delete`), Ballast uses it, so the tool's own records stay correct.
 - **Some things are refused outright:** a worktree with uncommitted changes, a database or virtual machine that's running, an editor's own settings database, an app that ships with macOS. The reason is shown next to the item.
-- **Versions your projects pin are marked.** Removing a language version a project pins shows a warning naming the project, and the version is never ticked by **Select safe**.
-- **Each item has a risk level.** *Regenerable* means it can be rebuilt or re-downloaded, *Review* means you should look first, and *Your data* means only you can say whether it's needed. **Select safe** ticks only the regenerable ones.
+- **Versions your projects pin are marked.** Removing a language version a project pins names the project and asks you to confirm you understand, and the version is never ticked by **Select safe**.
+- **Each item has a risk level.** *Regenerable* means it can be rebuilt or re-downloaded, *Review* means you should look first, and *Your data* means only you can say whether it's needed. **Select safe** ticks only the regenerable ones, and **Safe to reclaim** at the top of the list (or in the menu) shows all of them in one place.
 - Every action is logged to `~/Library/Application Support/Ballast/actions.log`.
 
 ## Permissions
@@ -64,7 +67,7 @@ Ballast asks for nothing up front. It reads your home folder like any app you ru
 
 - **Full Disk Access** is only needed for protected locations (some app containers and the Docker disk image). Ballast shows those items as locked and explains how to grant access if you want them measured.
 - **Administrator steps,** such as removing Docker's system helpers, are never run for you. Ballast shows the exact `sudo` command for you to run in Terminal.
-- **Finder** is used to empty the Trash, so macOS may ask once whether Ballast can control Finder.
+- **Finder** is used to empty the Trash, so macOS asks whether Ballast can control Finder the first time you click Empty Trash. If you said no, Ballast offers to open **Privacy & Security → Automation** so you can allow it.
 
 ## Install
 

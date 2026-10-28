@@ -58,7 +58,7 @@ public struct HomebrewProvider: Provider {
             let cellars = unneeded.map { prefix.appending(path: "Cellar/\($0)") }
             let m = await measure(cellars)
             items.append(Item(id: "brew.autoremove", title: "Unused dependencies", detail: unneeded.joined(separator: ", "),
-                              paths: cellars, bytes: m.bytes, sizeIsPartial: m.partial, risk: .regenerable))
+                              paths: cellars, bytes: m.bytes, sizeIsPartial: m.partial, risk: .review))
         }
 
         let logDir = prefix.appending(path: "var/log")
@@ -186,9 +186,9 @@ public struct DatabasesProvider: Provider {
                 continue
             }
             if item.id.hasPrefix("db.postgresapp.") || item.id.hasPrefix("db.dbngin.") {
-                plan.warnings.append("\(item.title) holds your databases. They'll be gone.")
+                plan.dangers.append("\(item.title) holds your databases. They'll be gone.")
             } else if !item.badges.contains(.orphaned) {
-                plan.warnings.append("\(item.title) holds the databases of an installed Postgres or MySQL. They'll be gone.")
+                plan.dangers.append("\(item.title) holds the databases of an installed Postgres or MySQL. They'll be gone.")
             }
             plan.steps.append(Step("Move \(item.title) to the Trash", .trash(item.paths), bytes: item.bytes, itemID: item.id))
         }

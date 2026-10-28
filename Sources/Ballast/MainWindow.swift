@@ -9,7 +9,9 @@ struct MainWindowRoot: View {
             Sidebar(model: model)
                 .navigationSplitViewColumnWidth(min: 220, ideal: 250)
         } detail: {
-            if let id = model.selection {
+            if model.selection == SafeView.id {
+                SafeView(model: model)
+            } else if let id = model.selection {
                 ConcernDetail(model: model, concernID: id)
             } else if model.scanning && model.reports.isEmpty {
                 ProgressView("Scanning your disk…")
@@ -48,6 +50,12 @@ struct Sidebar: View {
 
     var body: some View {
         List(selection: Binding(get: { model.selection }, set: { model.selection = $0 })) {
+            HStack {
+                Label("Safe to reclaim", systemImage: "checkmark.seal")
+                Spacer()
+                Text(formatBytes(model.reports.reduce(0) { $0 + $1.reclaimable })).monospacedDigit().foregroundStyle(.secondary)
+            }
+            .tag(SafeView.id)
             ForEach(ConcernSection.allCases, id: \.self) { section in
                 let rows = rows(section)
                 if !rows.isEmpty {

@@ -97,7 +97,7 @@ public struct XcodeProvider: Provider {
                 }
                 continue
             }
-            if let w = inUseWarning(item, noun: "simulator") { plan.warnings.append(w) }
+            if let w = inUseWarning(item, noun: "simulator") { plan.dangers.append(w) }
             let kind: StepKind
             if id.hasPrefix("xcode.sim.") {
                 kind = .command(argv: ["xcrun", "simctl", "delete", String(id.dropFirst("xcode.sim.".count))])

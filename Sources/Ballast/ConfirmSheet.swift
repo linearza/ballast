@@ -12,12 +12,18 @@ import SwiftUI
     var outcomes: [UUID: StepOutcome] = [:]
     var freed: Int64 = 0
     var trashed: Int64 = 0
+    /// Ticked "I understand" for a dangerous plan.
+    var acknowledged = false
 
     init(provider: any Provider, items: [Item], plan: Plan) {
         self.provider = provider
         self.items = items
         self.plan = plan
     }
+
+    var level: Caution { caution(of: plan, items: items) }
+    var dangers: [String] { dangerNotes(plan, items: items) }
+    var canRemove: Bool { !plan.steps.isEmpty && (level != .dangerous || acknowledged) }
 
     /// Steps grouped by item, in plan order. Steps without an item group on their own.
     var groups: [(title: String?, steps: [Step])] {
@@ -44,6 +50,7 @@ struct ConfirmSheet: View {
                         let title = state.items.first { $0.id == r.itemID }?.title ?? r.itemID
                         Label("\(title): \(r.reason)", systemImage: "xmark.octagon").foregroundStyle(.red)
                     }
+                    if state.phase == .confirm && !state.dangers.isEmpty { dangerBox }
                     ForEach(state.plan.warnings, id: \.self) { w in
                         Label(w, systemImage: "exclamationmark.triangle").foregroundStyle(.orange)
                     }
@@ -68,9 +75,12 @@ struct ConfirmSheet: View {
                 switch state.phase {
                 case .confirm:
                     Button("Cancel") { model.run = nil }.keyboardShortcut(.cancelAction)
-                    Button("Remove · \(formatBytes(state.plan.expectedBytes))") { Task { await model.execute(state) } }
-                        .keyboardShortcut(.defaultAction)
-                        .disabled(state.plan.steps.isEmpty)
+                    // Return only confirms routine removals; anything else takes a deliberate click.
+                    if state.level == .routine {
+                        removeButton.keyboardShortcut(.defaultAction)
+                    } else {
+                        removeButton.tint(state.level == .dangerous ? .red : nil)
+                    }
                 case .running:
                     ProgressView().controlSize(.small)
                 case .finished:
@@ -81,6 +91,28 @@ struct ConfirmSheet: View {
         }
         .padding(20)
         .frame(width: 560, height: 460)
+    }
+
+    var removeButton: some View {
+        Button("Remove · \(formatBytes(state.plan.expectedBytes))", role: state.level == .dangerous ? .destructive : nil) {
+            Task { await model.execute(state) }
+        }
+        .buttonStyle(.borderedProminent)
+        .disabled(!state.canRemove)
+    }
+
+    var dangerBox: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Label("Read this first", systemImage: "exclamationmark.octagon.fill").font(.headline).foregroundStyle(.red)
+            ForEach(state.dangers, id: \.self) { d in
+                Text("• \(d)").fixedSize(horizontal: false, vertical: true)
+            }
+            Toggle("I understand, and want to remove these", isOn: Binding(get: { state.acknowledged }, set: { state.acknowledged = $0 }))
+        }
+        .padding(10)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(RoundedRectangle(cornerRadius: 8).fill(Color.red.opacity(0.08)))
+        .overlay(RoundedRectangle(cornerRadius: 8).strokeBorder(Color.red.opacity(0.4)))
     }
 }
 
@@ -111,12 +143,20 @@ struct StepRow: View {
                         .controlSize(.small)
                     }
                 }
+                if outcome == nil { undoNote }
                 if let message = message { Text(message).font(.caption).foregroundStyle(.red) }
             }
         }
     }
 
     var outcome: StepOutcome? { state.outcomes[step.id] }
+
+    var undoNote: some View {
+        let undo = step.kind.undo
+        return Label(undo.label, systemImage: undo == .fromTrash ? "arrow.uturn.backward" : undo == .never ? "exclamationmark.circle" : "terminal")
+            .font(.caption)
+            .foregroundStyle(undo == .never ? Color.orange : Color.secondary)
+    }
 
     var message: String? {
         switch outcome {

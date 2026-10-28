@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.3.0 — 2026-10-28
+
+Ballast now guards harder against removing something you'll regret, especially if you're not sure what an item is.
+
+- **Confirmation matches the stakes.** Routine clean-ups still confirm with Return. Review items and warnings need a click. Anything that can lose your work (your data, a version you use or a project pins, a running or unpushed worktree, Docker volumes, an app's saved data, database files, uninstalling Docker or Ollama) is listed under **Read this first**, and Remove stays off until you tick **I understand**.
+- **Each step says whether it can be undone:** put back from the Trash, deleted for good (tool commands), or a command Ballast won't run for you.
+- **Protected folders.** Ballast refuses to remove your home folder, its standard folders (Documents, Desktop, Downloads, Library and others), SSH and GPG keys, Keychains and macOS's own folders, whatever a scan suggests.
+- **Removing an app** now says when its saved data (Application Support, Containers) goes with it.
+- **`brew autoremove`** is now *Review*: it can remove formulae you use directly that came in as dependencies.
+- **Build folders tracked by git** (a committed `Pods` or `dist`) are no longer offered as leftovers.
+- **Safe to reclaim** opens a view of every item it counts, grouped by tool, with a button to review and remove each group. It's at the top of the sidebar and in the menu.
+- **Empty Trash works again.** Ballast now declares why it controls Finder, so macOS asks instead of refusing. If you declined, it offers to open the right Settings pane. The confirmation says it removes everything in the Trash, and Return cancels.
+
 ## 0.2.0 — 2026-10-28
 
 Ballast now recognises far more of the tools developers use.

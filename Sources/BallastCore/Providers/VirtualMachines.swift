@@ -108,7 +108,7 @@ public struct VirtualMachinesProvider: Provider {
             default: nil
             }
             let step: StepKind = if let tool, await env.runner.which(tool[0]) != nil { .command(argv: tool) } else { .trash(item.paths) }
-            if item.risk == .yourData { plan.warnings.append("\(item.title) is a whole virtual machine, with everything saved inside it.") }
+            if item.risk == .yourData { plan.dangers.append("\(item.title) is a whole virtual machine, with everything saved inside it.") }
             plan.steps.append(Step("Remove \(item.title)", step, bytes: item.bytes, itemID: item.id))
         }
         return plan

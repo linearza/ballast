@@ -73,6 +73,7 @@ public final class Executor: Sendable {
         case .trash(let urls):
             let present = urls.filter { FileManager.default.fileExists(atPath: $0.path) || isSymlink($0) }
             guard !present.isEmpty else { return .skipped("Already gone") }
+            if present.contains(where: isProtected) { return .failed(Self.protectedPath) }
             for url in present {
                 if let why = ownedByAnotherUser(url) { return .failed(why) }
                 do { try env.trash(url) } catch { return failure(error, url) }
@@ -106,6 +107,26 @@ public final class Executor: Sendable {
 
     func failure(_ error: Error, _ url: URL) -> StepOutcome {
         isPermission(error) ? .failed(Self.needsFullDiskAccess) : .failed(error.localizedDescription)
+    }
+
+    public static let protectedPath = "Ballast never removes this folder: macOS or your personal files depend on it"
+
+    /// A last line of defence, whatever a provider asks for: never the home folder or anything above it,
+    /// your personal folders, macOS's own folders, or keys and passwords.
+    func isProtected(_ url: URL) -> Bool {
+        let path = url.standardizedFileURL.resolvingSymlinksInPath().path
+        let home = env.home.standardizedFileURL.resolvingSymlinksInPath().path
+        if home == path || home.hasPrefix(path.hasSuffix("/") ? path : path + "/") { return true }
+        let exact = ["Documents", "Desktop", "Downloads", "Library", "Movies", "Music", "Pictures", "Public", "Applications",
+                     "Library/Application Support", "Library/Preferences", "Library/Caches", "Library/Containers",
+                     "Library/Group Containers", "Library/Mobile Documents", "Library/CloudStorage", "Library/Mail", "Library/Messages",
+                     "Library/Photos", ".config", ".local", ".local/share", ".cache"].map { env.path($0).path }
+            + ["System", "Library", "Applications", "Users", "usr", "usr/local", "usr/local/bin", "bin", "sbin", "private", "etc",
+               "var", "opt", "opt/homebrew", "Volumes", "Library/Java/JavaVirtualMachines", "Library/Developer"].map { env.system($0).path }
+        if exact.contains(path) { return true }
+        let inside = [".ssh", ".gnupg", "Library/Keychains"].map { env.path($0).path }
+            + ["System", "usr/bin", "usr/sbin", "usr/lib", "bin", "sbin", "private/etc", "Library/Keychains"].map { env.system($0).path }
+        return inside.contains { path == $0 || path.hasPrefix($0 + "/") }
     }
 
     public static let ownedByAnotherUser = "Installed for all users. Move it to the Trash in Finder, which asks for your password"
