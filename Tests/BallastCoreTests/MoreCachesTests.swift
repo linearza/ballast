@@ -94,3 +94,33 @@ import Testing
         #expect(busy.refusals.first?.reason.contains("limactl stop busy") == true)
     }
 }
+
+@Suite struct XcodeAndAndroidTests {
+    @Test func moreXcodeFolders() async throws {
+        let f = Fixture()
+        for rel in ["Library/Developer/Xcode/watchOS DeviceSupport", "Library/Developer/Xcode/tvOS DeviceSupport",
+                    "Library/Developer/Xcode/visionOS DeviceSupport", "Library/Logs/CoreSimulator",
+                    "Library/Developer/Xcode/DocumentationCache"] { f.file("\(rel)/x", bytes: 10) }
+        let ids = Set(await XcodeProvider().scan(f.env(), pins: Pins()).map(\.id))
+        #expect(ids.isSuperset(of: ["xcode.watchsupport", "xcode.tvsupport", "xcode.visionsupport", "xcode.simlogs", "xcode.docs"]))
+    }
+
+    @Test func androidImagesNdksAndEmulators() async throws {
+        let f = Fixture()
+        f.file("Library/Android/sdk/system-images/android-34/google_apis/arm64-v8a/system.img", bytes: 100)
+        f.file("Library/Android/sdk/ndk/26.1.10909125/source.properties", bytes: 10)
+        f.file(".android/avd/Pixel_8.avd/userdata.img", bytes: 100)
+        f.file(".android/avd/Pixel_8.ini", contents: "path=x\n")
+        let env = f.env(runner: FakeRunner(tools: ["sdkmanager", "avdmanager"]))
+        let p = AndroidProvider()
+        let items = await p.scan(env, pins: Pins())
+        let m = Dictionary(uniqueKeysWithValues: items.map { ($0.id, $0) })
+        #expect(Set(m.keys) == ["android.image.android-34;google_apis;arm64-v8a", "android.ndk.26.1.10909125", "android.avd.Pixel_8"])
+        #expect(m["android.avd.Pixel_8"]?.paths == [f.url(".android/avd/Pixel_8.avd"), f.url(".android/avd/Pixel_8.ini")])
+        func kind(_ id: String) async -> StepKind? { await p.plan([id], items: items, env: env).steps.first?.kind }
+        #expect(await kind("android.image.android-34;google_apis;arm64-v8a")
+                == .command(argv: ["sdkmanager", "--uninstall", "system-images;android-34;google_apis;arm64-v8a"]))
+        #expect(await kind("android.ndk.26.1.10909125") == .command(argv: ["sdkmanager", "--uninstall", "ndk;26.1.10909125"]))
+        #expect(await kind("android.avd.Pixel_8") == .command(argv: ["avdmanager", "delete", "avd", "-n", "Pixel_8"]))
+    }
+}
