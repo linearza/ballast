@@ -1,7 +1,7 @@
 import Foundation
 
 public enum BallastCore {
-    public static let version = "0.2.0"
+    public static let version = "0.3.0"
 }
 
 /// How safe an item is to remove.
@@ -127,6 +127,27 @@ public enum StepKind: Sendable, Equatable {
         case .copyToTerminal(let command): command
         }
     }
+
+    /// Whether the step can be taken back, said next to it before anything runs.
+    public var undo: Undo {
+        switch self {
+        case .trash, .unloadLoginItem: .fromTrash
+        case .command, .shell, .truncate: .never
+        case .copyToTerminal: .yourCall
+        }
+    }
+}
+
+public enum Undo: Sendable, Equatable {
+    case fromTrash, never, yourCall
+
+    public var label: String {
+        switch self {
+        case .fromTrash: "Can be put back from the Trash"
+        case .never: "Deleted for good"
+        case .yourCall: "Ballast won't run this. Only paste it into Terminal if you're sure; it asks for your password"
+        }
+    }
 }
 
 public struct Step: Sendable, Identifiable, Equatable {
@@ -157,12 +178,16 @@ public struct Refusal: Sendable, Equatable {
 
 public struct Plan: Sendable {
     public var steps: [Step]
+    /// Worth reading first.
     public var warnings: [String]
+    /// Hard to recover from: the user has to say they understand before Remove is enabled.
+    public var dangers: [String]
     public var refusals: [Refusal]
 
-    public init(steps: [Step] = [], warnings: [String] = [], refusals: [Refusal] = []) {
+    public init(steps: [Step] = [], warnings: [String] = [], dangers: [String] = [], refusals: [Refusal] = []) {
         self.steps = steps
         self.warnings = warnings
+        self.dangers = dangers
         self.refusals = refusals
     }
 
@@ -171,8 +196,45 @@ public struct Plan: Sendable {
     public mutating func append(_ other: Plan) {
         steps += other.steps
         warnings += other.warnings
+        dangers += other.dangers
         refusals += other.refusals
     }
+}
+
+/// How much the confirmation asks of the user.
+public enum Caution: Sendable, Equatable {
+    /// Regenerable things nobody uses: Return confirms.
+    case routine
+    /// Worth a look: Remove needs a click.
+    case careful
+    /// Hard to recover from: Remove needs a click after ticking "I understand".
+    case dangerous
+}
+
+/// The provider's dangers, plus one for each item of your data the provider didn't already explain.
+public func dangerNotes(_ plan: Plan, items: [Item]) -> [String] {
+    let planned = Set(plan.steps.compactMap(\.itemID))
+    let unexplained = items.filter { planned.contains($0.id) && $0.risk == .yourData }
+        .filter { item in !plan.dangers.contains { $0.contains(item.title) } }
+        .map { "\($0.title) is your data. Only you can tell whether it's still needed, and Ballast can't bring it back." }
+    return plan.dangers + unexplained
+}
+
+public func caution(of plan: Plan, items: [Item]) -> Caution {
+    if !dangerNotes(plan, items: items).isEmpty { return .dangerous }
+    let planned = Set(plan.steps.compactMap(\.itemID))
+    if !plan.warnings.isEmpty || items.contains(where: { planned.contains($0.id) && $0.risk != .regenerable }) { return .careful }
+    return .routine
+}
+
+/// "Safe to reclaim" across every concern: regenerable items nothing uses, biggest group first.
+public func safeGroups(_ reports: [ConcernReport]) -> [(report: ConcernReport, items: [Item])] {
+    reports.compactMap { r in
+        let safe = selectSafe(r.items)
+        let items = r.items.filter { safe.contains($0.id) }.sorted { $0.bytes > $1.bytes }
+        return items.isEmpty ? nil : (r, items)
+    }
+    .sorted { $0.items.reduce(0) { $0 + $1.bytes } > $1.items.reduce(0) { $0 + $1.bytes } }
 }
 
 /// A whole-tool action offered beside the item list, like "Uninstall RVM completely".

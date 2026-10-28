@@ -112,22 +112,36 @@ import UserNotifications
         trashBytes = m.partial && m.bytes == 0 ? nil : m.bytes
     }
 
+    static let automationSettingsURL = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Automation")!
+
     /// Asks first, then has Finder empty the Trash.
     func emptyTrash() async {
         NSApp.activate(ignoringOtherApps: true)
         let alert = NSAlert()
         alert.messageText = "Empty the Trash?"
-        alert.informativeText = "Everything in the Trash is deleted for good. This can't be undone."
-        alert.addButton(withTitle: "Empty Trash")
-        alert.addButton(withTitle: "Cancel")
+        alert.informativeText = "Everything in the Trash is deleted for good, including things you put there before. This can't be undone."
+        let empty = alert.addButton(withTitle: "Empty Trash")
+        let cancel = alert.addButton(withTitle: "Cancel")
+        // Return cancels: deleting for good takes a deliberate click.
+        empty.hasDestructiveAction = true
+        empty.keyEquivalent = ""
+        cancel.keyEquivalent = "\r"
         guard alert.runModal() == .alertFirstButtonReturn else { return }
         var error: NSDictionary?
         NSAppleScript(source: "tell application \"Finder\" to empty trash")?.executeAndReturnError(&error)
         if let error {
             let failed = NSAlert()
             failed.messageText = "Couldn't empty the Trash"
-            failed.informativeText = error[NSAppleScript.errorMessage] as? String ?? "Finder said no."
-            failed.runModal()
+            // -1743: the user (or macOS, for an app without a usage description) said no to controlling Finder.
+            if error[NSAppleScript.errorNumber] as? Int == -1743 {
+                failed.informativeText = "Ballast isn't allowed to ask Finder. Turn on Finder under Ballast in Privacy & Security → Automation, or empty the Trash from the Dock."
+                failed.addButton(withTitle: "Open Settings")
+                failed.addButton(withTitle: "OK")
+                if failed.runModal() == .alertFirstButtonReturn { NSWorkspace.shared.open(Self.automationSettingsURL) }
+            } else {
+                failed.informativeText = error[NSAppleScript.errorMessage] as? String ?? "Finder said no."
+                failed.runModal()
+            }
         }
         refreshSpace()
         await measureTrash()

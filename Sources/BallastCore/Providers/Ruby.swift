@@ -90,8 +90,8 @@ public struct RubyProvider: Provider {
         if ids.contains(Self.implode) {
             let bytes = await measure([env.path(".rvm")]).bytes
             return Plan(steps: [Step("Remove RVM and everything it installed", .shell("\(source) && rvm implode --force"), bytes: bytes)],
-                        warnings: ["This removes every Ruby version and gem installed with RVM.",
-                                   "Afterwards, remove the RVM lines from ~/.zshrc, ~/.zprofile or ~/.bash_profile."])
+                        warnings: ["Afterwards, remove the RVM lines from ~/.zshrc, ~/.zprofile or ~/.bash_profile."],
+                        dangers: ["This removes every Ruby version and gem installed with RVM."])
         }
         return planEach(ids, items: items, noun: "Ruby") { item in
             let parts = item.id.split(separator: ".", maxSplits: 2).map(String.init)

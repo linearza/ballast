@@ -8,8 +8,16 @@ struct Popover: View {
         VStack(alignment: .leading, spacing: 12) {
             freeSpace
             if let summary = model.summary {
-                Text("Safe to reclaim: \(formatBytes(model.safeToReclaim))")
-                    .font(.headline)
+                Button { open(SafeView.id) } label: {
+                    HStack {
+                        Text("Safe to reclaim: \(formatBytes(model.safeToReclaim))").font(.headline)
+                        Spacer()
+                        Image(systemName: "chevron.right").foregroundStyle(.secondary)
+                    }
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .help("See what's safe to remove")
                 Divider()
                 ForEach(summary.concerns.prefix(5), id: \.id) { c in
                     Button { open(c.id) } label: {

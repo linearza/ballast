@@ -131,7 +131,7 @@ import Testing
         #expect(await firstKind(p, "lang.mise.erlang.26.2", items, env) == .command(argv: ["mise", "uninstall", "erlang@26.2"]))
     }
 
-    @Test func pinnedLanguageVersionsWarnLikeRuby() async throws {
+    @Test func pinnedLanguageVersionsNeedAcknowledgingLikeRuby() async throws {
         let f = Fixture()
         f.file(".goenv/versions/1.21.5/bin/go", bytes: 10)
         f.file("Projects/web/.go-version", contents: "1.21.5\n")
@@ -140,6 +140,6 @@ import Testing
         let items = await LanguagesProvider().scan(env, pins: pins)
         let plan = await LanguagesProvider().plan(items.map(\.id), items: items, env: env)
         #expect(plan.refusals.isEmpty)
-        #expect(plan.warnings.contains { $0.contains("web") })
+        #expect(plan.dangers.contains { $0.contains("web") })
     }
 }

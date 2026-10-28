@@ -84,12 +84,16 @@ public struct DockerProvider: Provider {
 
     public func plan(_ ids: [String], items: [Item], env: Environment) async -> Plan {
         if ids.contains(Self.uninstall) { return uninstallPlan(items, env: env) }
-        return planEach(ids, items: items, noun: "Docker") { item in
+        var plan = planEach(ids, items: items, noun: "Docker") { item in
             if item.id.hasPrefix("docker.df."), let t = Self.dfTypes.values.first(where: { "docker.df.\($0.id)" == item.id }) {
                 return [Step("Remove \(item.title.lowercased())", .command(argv: t.argv), bytes: item.bytes, itemID: item.id)]
             }
             return trashSteps(item, env: env)
         }
+        if ids.contains("docker.df.volumes") {
+            plan.dangers.append("Unused volumes hold the data of containers that aren't running, such as local databases. Docker deletes them for good.")
+        }
+        return plan
     }
 
     func trashSteps(_ item: Item, env: Environment) -> [Step] {
@@ -100,9 +104,9 @@ public struct DockerProvider: Provider {
     }
 
     func uninstallPlan(_ items: [Item], env: Environment) -> Plan {
-        var plan = Plan(warnings: ["This removes Docker Desktop with all its images, containers and volumes."])
+        var plan = Plan(dangers: ["This removes Docker Desktop with all its images, containers and volumes."])
         if items.contains(where: { $0.id == "docker.app" && $0.badges.contains(.running) }) {
-            plan.warnings.append("Docker Desktop is running. Quit it first.")
+            plan.dangers.append("Docker Desktop is running. Quit it first.")
         }
         let candidates = [app(env), env.path(".Trash/Docker.app")].compactMap { $0 }
         if let uninstaller = candidates.map({ $0.appending(path: "Contents/MacOS/uninstall") }).first(where: exists) {

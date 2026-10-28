@@ -128,7 +128,7 @@ public struct AIModelsProvider: Provider {
     }
 
     func uninstallPlan(_ items: [Item], env: Environment) async -> Plan {
-        var plan = Plan(warnings: ["This removes Ollama and every model it downloaded."])
+        var plan = Plan(dangers: ["This removes Ollama and every model it downloaded."])
         let formulas = await env.runner.run(["brew", "list", "--formula"], timeout: .seconds(30))
         if formulas.ok, formulas.stdout.split(whereSeparator: \.isNewline).contains("ollama") {
             plan.steps.append(Step("Uninstall Ollama with Homebrew", .command(argv: ["brew", "uninstall", "ollama"])))

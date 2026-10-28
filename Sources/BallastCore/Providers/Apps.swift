@@ -15,6 +15,9 @@ public struct AppsProvider: Provider {
     static let leftoverDirs = ["Application Support", "Caches", "Containers", "Group Containers", "Preferences",
                                "Saved Application State", "HTTPStorages", "WebKit", "LaunchAgents"]
 
+    /// Where apps keep what you made in them, not just settings and caches.
+    static let dataDirs = ["Application Support", "Containers", "Group Containers"]
+
     func bundleID(_ app: URL) -> String? {
         NSDictionary(contentsOf: app.appending(path: "Contents/Info.plist"))?["CFBundleIdentifier"] as? String
     }
@@ -77,7 +80,7 @@ public struct AppsProvider: Provider {
                 plan.refusals.append(Refusal(itemID: id, reason: "Part of macOS"))
                 continue
             }
-            if let w = inUseWarning(item, noun: "app") { plan.warnings.append(w) }
+            if let w = inUseWarning(item, noun: "app") { plan.dangers.append(w) }
             plan.steps.append(Step("Move \(item.title) to the Trash", .trash([app]), bytes: item.bytes, itemID: id))
             guard let bid else { continue }
             let found = leftovers(bid, otherIDs: items.compactMap(\.detail), env: env)
@@ -85,7 +88,10 @@ public struct AppsProvider: Provider {
                 // Containers aren't measured: reading them can bring up a permission prompt.
                 let readable = found.filter { !$0.path.contains("/Containers/") }
                 let bytes = await measure(readable).bytes
-                plan.steps.append(Step("Move \(item.title)'s settings and caches to the Trash", .trash(found), bytes: bytes, itemID: id))
+                plan.steps.append(Step("Move \(item.title)'s settings, caches and data to the Trash", .trash(found), bytes: bytes, itemID: id))
+                if found.contains(where: { url in Self.dataDirs.contains { url.path.contains("/Library/\($0)/") } }) {
+                    plan.dangers.append("\(item.title)'s own data goes too, like documents or libraries kept inside the app. If you saved work in \(item.title), export it first.")
+                }
             }
         }
         return plan

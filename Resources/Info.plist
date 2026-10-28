@@ -13,6 +13,7 @@
 	<key>LSMinimumSystemVersion</key><string>14.0</string>
 	<key>LSUIElement</key><true/>
 	<key>NSHumanReadableCopyright</key><string>© 2026 linearza. MIT licence.</string>
+	<key>NSAppleEventsUsageDescription</key><string>Ballast asks Finder to empty the Trash when you click Empty Trash.</string>
 	<key>BallastRepo</key><string>__REPO__</string>
 </dict>
 </plist>

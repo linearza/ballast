@@ -88,7 +88,7 @@ func planEach(_ ids: [String], items: [Item], noun: String, _ steps: (Item) -> [
     let byID = Dictionary(items.map { ($0.id, $0) }, uniquingKeysWith: { a, _ in a })
     for id in ids {
         guard let item = byID[id] else { continue }
-        if let w = inUseWarning(item, noun: noun) { plan.warnings.append(w) }
+        if let w = inUseWarning(item, noun: noun) { plan.dangers.append(w) }
         plan.steps += steps(item)
     }
     return plan
