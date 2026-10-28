@@ -124,3 +124,42 @@ import Testing
         #expect(await kind("android.avd.Pixel_8") == .command(argv: ["avdmanager", "delete", "avd", "-n", "Pixel_8"]))
     }
 }
+
+@Suite struct MoreDataTests {
+    @Test func postgresAppDBnginAndMoreBrewDatabases() async throws {
+        let f = Fixture()
+        f.file("opt/homebrew/bin/brew", contents: "#!/bin/sh\n")
+        f.file("opt/homebrew/var/elasticsearch/nodes/x", bytes: 100)
+        f.file("opt/homebrew/var/rabbitmq/x", bytes: 100)
+        f.file("Library/Application Support/Postgres/var-16/PG_VERSION", contents: "16\n")
+        f.file("Library/Application Support/Postgres/var-15/PG_VERSION", contents: "15\n")
+        f.file("Library/Application Support/Postgres/var-15/postmaster.pid", contents: "\(getpid())\n")
+        f.file("Users/Shared/DBngin/mysql/8.0.33/data/ibdata1", bytes: 100)
+        let runner = FakeRunner(["brew services list --json": FakeRunner.out("[]"),
+                                 "brew list --formula": FakeRunner.out("elasticsearch\n")], tools: ["brew"])
+        let env = f.env(runner: runner)
+        let p = DatabasesProvider()
+        let items = await p.scan(env, pins: Pins())
+        let m = Dictionary(uniqueKeysWithValues: items.map { ($0.id, $0) })
+        #expect(Set(m.keys) == ["db.elasticsearch", "db.rabbitmq", "db.postgresapp.var-16", "db.postgresapp.var-15", "db.dbngin.mysql.8.0.33"])
+        #expect(m["db.postgresapp.var-16"]?.title == "Postgres.app 16")
+        #expect(m["db.postgresapp.var-15"]?.badges.contains(.running) == true)
+        let plan = await p.plan(["db.postgresapp.var-15"], items: items, env: env)
+        #expect(plan.refusals.first?.reason.contains("Postgres.app") == true)
+    }
+
+    @Test func moreLocalModels() async throws {
+        let f = Fixture()
+        f.file("Library/Application Support/nomic.ai/GPT4All/Llama-3-8B.Q4_0.gguf", bytes: 100)
+        f.file("Library/Application Support/Jan/data/models/mistral-7b/model.gguf", bytes: 100)
+        f.file("Library/Caches/llama.cpp/qwen2.5-7b.gguf", bytes: 100)
+        f.file(".diffusionbee/downloads/x", bytes: 100)
+        f.file(".cache/torch/hub/checkpoints/x.pth", bytes: 100)
+        let ids = Set(await AIModelsProvider().scan(f.env(), pins: Pins()).map(\.id))
+        #expect(ids == ["ai.gpt4all.Llama-3-8B.Q4_0.gguf", "ai.jan.mistral-7b", "ai.llamacpp.qwen2.5-7b.gguf",
+                        "ai.diffusionbee", "ai.torch"])
+        // llama.cpp's cache is models, so it isn't listed again as an app cache.
+        let caches = await AppCachesProvider(minBytes: 0).scan(f.env(), pins: Pins())
+        #expect(!caches.contains { $0.paths.contains(f.url("Library/Caches/llama.cpp")) })
+    }
+}

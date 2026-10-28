@@ -100,7 +100,7 @@ public struct HomebrewProvider: Provider {
 }
 
 /// Database folders Homebrew services keep in `var/`, including ones left
-/// behind after the formula was uninstalled.
+/// behind after the formula was uninstalled, and the data of Postgres.app and DBngin.
 public struct DatabasesProvider: Provider {
     public init() {}
     public let id = "databases"
@@ -108,14 +108,36 @@ public struct DatabasesProvider: Provider {
     public let section = Section.databases
     public let symbol = "cylinder.split.1x2"
 
-    static let prefixes = ["postgres", "mysql", "mariadb", "redis", "mongodb"]
+    static let prefixes = ["postgres", "mysql", "mariadb", "redis", "mongodb", "elasticsearch", "opensearch", "cassandra",
+                           "influxdb", "couchdb", "rabbitmq", "minio", "clickhouse", "valkey", "neo4j"]
+    static let postgresApp = "Library/Application Support/Postgres"
+    static let dbngin = "Users/Shared/DBngin"
 
-    public func isPresent(_ env: Environment) async -> Bool { env.brewPrefix != nil }
+    public func isPresent(_ env: Environment) async -> Bool {
+        env.brewPrefix != nil || exists(env.path(Self.postgresApp)) || exists(env.system(Self.dbngin))
+    }
 
     public func scan(_ env: Environment, pins: Pins) async -> [Item] {
-        guard let prefix = env.brewPrefix else { return [] }
-        let state = await BrewState.read(env)
         var items: [Item] = []
+        // Postgres.app keeps one data folder per major version: var-16.
+        for name in subfolders(env.path(Self.postgresApp)) where name.hasPrefix("var-") {
+            let dir = env.path("\(Self.postgresApp)/\(name)")
+            let live = hasLivePidFile(dir)
+            items.append(Item(id: "db.postgresapp.\(name)", title: "Postgres.app \(name.dropFirst(4))", detail: live ? "Running" : "Stopped",
+                              paths: [dir], bytes: 0, risk: .yourData, badges: live ? [.running] : []))
+        }
+        // DBngin: <engine>/<version>, with the server's files and its data.
+        let dbngin = env.system(Self.dbngin)
+        for engine in subfolders(dbngin) {
+            for version in subfolders(dbngin.appending(path: engine)) {
+                let dir = dbngin.appending(path: "\(engine)/\(version)")
+                let live = hasLivePidFile(dir) || hasLivePidFile(dir.appending(path: "data"))
+                items.append(Item(id: "db.dbngin.\(engine).\(version)", title: "\(engine) \(version)", detail: "DBngin · \(live ? "Running" : "Stopped")",
+                                  paths: [dir], bytes: 0, risk: .yourData, badges: live ? [.running] : []))
+            }
+        }
+        guard let prefix = env.brewPrefix else { return await measured(items) }
+        let state = await BrewState.read(env)
         for name in subfolders(prefix.appending(path: "var")) where Self.prefixes.contains(where: name.hasPrefix) {
             var badges = Set<Badge>()
             let formula = matchingFormula(name, in: state.formulae)
@@ -158,10 +180,14 @@ public struct DatabasesProvider: Provider {
         var plan = Plan()
         for item in items where ids.contains(item.id) {
             if item.badges.contains(.running) {
-                plan.refusals.append(Refusal(itemID: item.id, reason: "Running database. Stop it first with brew services stop \(item.title)"))
+                let how = item.id.hasPrefix("db.postgresapp.") ? "in Postgres.app" : item.id.hasPrefix("db.dbngin.") ? "in DBngin"
+                    : "with brew services stop \(item.title)"
+                plan.refusals.append(Refusal(itemID: item.id, reason: "Running database. Stop it first \(how)"))
                 continue
             }
-            if !item.badges.contains(.orphaned) {
+            if item.id.hasPrefix("db.postgresapp.") || item.id.hasPrefix("db.dbngin.") {
+                plan.warnings.append("\(item.title) holds your databases. They'll be gone.")
+            } else if !item.badges.contains(.orphaned) {
                 plan.warnings.append("\(item.title) holds the databases of an installed Postgres or MySQL. They'll be gone.")
             }
             plan.steps.append(Step("Move \(item.title) to the Trash", .trash(item.paths), bytes: item.bytes, itemID: item.id))
