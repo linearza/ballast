@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.4.0 — 2026-10-28
+
+- **Quiet mode:** *Go Quiet…* in the menu's gear menu, or the toggle in Settings, hides the menu bar icon and stops Ballast's notifications (low disk space and new releases). It stays quiet until you turn it off; background rescans carry on. Open Ballast from Applications or Spotlight to see its window, and press ⌘, for Settings.
+
 ## 0.3.1 — 2026-10-28
 
 - **iCloud Drive:** large files in a Desktop or Documents folder synced with iCloud are marked *in iCloud*, and removing them needs **I understand**, because it removes them from every device.

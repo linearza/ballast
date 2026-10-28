@@ -19,7 +19,7 @@ import SwiftUI
 
     func showSettings(_ model: AppModel) {
         if settings == nil {
-            settings = window("Ballast Settings", size: NSSize(width: 520, height: 440), resizable: false,
+            settings = window("Ballast Settings", size: NSSize(width: 520, height: 520), resizable: false,
                               content: SettingsView(model: model))
         }
         bringForward(settings)

@@ -1,7 +1,7 @@
 import Foundation
 
 public enum BallastCore {
-    public static let version = "0.3.1"
+    public static let version = "0.4.0"
 }
 
 /// How safe an item is to remove.

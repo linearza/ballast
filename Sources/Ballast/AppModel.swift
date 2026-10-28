@@ -65,7 +65,7 @@ import UserNotifications
             startSchedule()
         }
         await measureTrash()
-        await updates.check()
+        await updates.check(notifying: !prefs.quiet)
     }
 
     /// The first-run sheet's Continue.
@@ -159,7 +159,7 @@ import UserNotifications
 
     func scheduledCheck() async {
         // Menu bar apps stay open for weeks; `check` itself asks GitHub at most once a day.
-        await updates.check()
+        await updates.check(notifying: !prefs.quiet)
         guard prefs.rescanHours > 0, !scanning else { return }
         let age = Date().timeIntervalSince(summary?.scannedAt ?? .distantPast)
         if age >= Double(prefs.rescanHours) * 3600 { await scanNow(background: true) }
@@ -219,6 +219,7 @@ import UserNotifications
 
     /// At most once a day.
     func notifyLowSpace() {
+        guard !prefs.quiet else { return }
         let key = "lastLowSpaceNotice"
         let last = UserDefaults.standard.object(forKey: key) as? Date ?? .distantPast
         guard Date().timeIntervalSince(last) > 86_400 else { return }
