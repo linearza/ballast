@@ -13,12 +13,14 @@
 
 Ballast looks at the things that quietly fill a developer's disk and shows what each one is, how big it is, and whether anything still uses it:
 
-- **Developer toolchains:** Ruby, Node and Python versions (rvm, rbenv, asdf, mise, nvm, fnm, pyenv), Homebrew leftovers, Xcode versions, simulators and runtimes, GitHub Actions runners
-- **Containers and VMs:** Docker images, volumes and build cache, and Docker Desktop itself
-- **Project leftovers:** `node_modules` in projects you haven't touched for a while, and git worktrees whose pull request is merged
-- **Caches:** package manager caches (npm, Yarn, pnpm, pip, Cargo, Gradle, CocoaPods and more) and large app caches
-- **Local databases:** Postgres, MySQL, Redis and others installed with Homebrew
-- **AI models:** Ollama, Hugging Face, Whisper and LM Studio models
+- **Developer toolchains:** Ruby, Node and Python versions (rvm, rbenv, chruby, frum, asdf, mise, nvm, fnm, n, nodenv, pyenv, uv), conda environments, pipx apps and Poetry, Pipenv and Hatch virtualenvs; Java, Go, Rust, Elixir, PHP and other languages (SDKMAN, goenv, rustup, asdf, mise); Homebrew leftovers, GitHub Actions runners
+- **Xcode and Android:** Xcode versions, simulators, runtimes, device support for iOS, watchOS, tvOS and visionOS, simulator logs and docs; Android system images, NDKs and emulators
+- **Containers and VMs:** Docker images, volumes and build cache, Docker Desktop itself, Colima, Lima, minikube, Podman and Rancher Desktop machines, and Parallels and VMware virtual machines
+- **Project leftovers:** build output in projects you haven't touched for a while (`node_modules`, `target`, `.venv`, `.next`, `Pods`, `.gradle`, `_build` and more), and git worktrees whose pull request is merged
+- **Caches:** package manager caches (npm, Yarn, pnpm, Bun, Deno, pip, uv, Poetry, conda, Cargo, Go modules, Gradle, Maven, sbt, CocoaPods, Carthage, SwiftPM, NuGet, Composer and more) and large app caches
+- **Local databases:** Postgres, MySQL, Redis and others from Homebrew, Postgres.app and DBngin
+- **AI models:** Ollama, Hugging Face, Whisper, LM Studio, GPT4All, Jan, llama.cpp, DiffusionBee and PyTorch Hub models
+- **AI tools and editors:** caches and old workspace data of Cursor, VS Code, Windsurf and the Claude app, old Claude Code versions, and Claude Code history for projects that no longer exist
 - **Apps:** your apps with their size and when you last opened them, removed together with their leftovers
 - **Large personal files:** the biggest files in your home folder, only when you ask
 
@@ -31,7 +33,7 @@ The menu bar icon shows free space at a glance. Click it for a summary, or open 
 </picture>
 </p>
 
-Project leftovers shows which `node_modules` folders belong to projects you haven't touched in a while, and which git worktrees are done with: their pull request is merged and nothing is left uncommitted or unpushed.
+Project leftovers shows which `node_modules` and other build folders belong to projects you haven't touched in a while, and which git worktrees are done with: their pull request is merged and nothing is left uncommitted or unpushed.
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/projects-dark.png">
@@ -51,7 +53,8 @@ Ballast is built so that cleaning up is hard to regret.
 - **It checks again before acting.** Just before running, Ballast re-checks each item. If something changed since the scan (a version is now pinned by a project, a worktree has new changes, a database is running), that step is skipped and the reason is shown.
 - **Files go to the Trash,** not straight to deletion, so you can put them back.
 - **Tools clean up their own data.** Where a tool has its own way to remove something (`brew uninstall`, `docker image rm`, `ollama rm`, `git worktree remove`, `xcrun simctl delete`), Ballast uses it, so the tool's own records stay correct.
-- **Some things are refused outright:** a Ruby or Node version one of your projects pins, a worktree with uncommitted changes, an app that ships with macOS. The reason is shown next to the item.
+- **Some things are refused outright:** a worktree with uncommitted changes, a database or virtual machine that's running, an editor's own settings database, an app that ships with macOS. The reason is shown next to the item.
+- **Versions your projects pin are marked.** Removing a language version a project pins shows a warning naming the project, and the version is never ticked by **Select safe**.
 - **Each item has a risk level.** *Regenerable* means it can be rebuilt or re-downloaded, *Review* means you should look first, and *Your data* means only you can say whether it's needed. **Select safe** ticks only the regenerable ones.
 - Every action is logged to `~/Library/Application Support/Ballast/actions.log`.
 
@@ -114,7 +117,7 @@ Ballast asks where your projects live. It uses those folders to see which langua
 - Project folders
 - How often to rescan in the background: off, every 6 hours or every 24 hours
 - When to warn about low free space (10% by default)
-- How long a project must be idle before its `node_modules` counts as safe (60 days by default)
+- How long a project must be idle before its build output (`node_modules`, `target`, `.venv` and the like) counts as safe (60 days by default)
 - Open at login
 
 ## Uninstall

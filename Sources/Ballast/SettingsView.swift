@@ -28,7 +28,7 @@ struct SettingsView: View {
                 }
                 Stepper("Warn when free space is below \(prefs.lowSpacePercent)%",
                         value: Binding(get: { prefs.lowSpacePercent }, set: { prefs.lowSpacePercent = $0 }), in: 1...50)
-                Stepper("node_modules idle after \(prefs.idleDays) days",
+                Stepper("Build output idle after \(prefs.idleDays) days",
                         value: Binding(get: { prefs.idleDays }, set: { prefs.idleDays = $0 }), in: 7...365, step: 7)
             }
             SwiftUI.Section("General") {
@@ -115,7 +115,7 @@ struct FirstRunSheet: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             Text("Where are your projects?").font(.title3.bold())
-            Text("Ballast looks in these folders to see which language versions your projects use, so it never suggests removing one they need, and to find leftovers like old node_modules.")
+            Text("Ballast looks in these folders to see which language versions your projects use, so it never suggests removing one they need, and to find leftovers like old node_modules and build folders.")
                 .fixedSize(horizontal: false, vertical: true)
             ForEach(choice.found, id: \.self) { path in
                 Toggle(path.replacingOccurrences(of: NSHomeDirectory(), with: "~"), isOn: Binding(
