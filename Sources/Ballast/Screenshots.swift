@@ -34,6 +34,11 @@ import SwiftUI
             let sheet = await render(ConfirmSheet(model: model, state: confirmState(model)), size: NSSize(width: 560, height: 560), title: nil, dark: dark)
             save(frame(main, sheet: sheet), dir.appending(path: "confirm\(suffix).png"))
 
+            model.selection = "aiModels"
+            model.checked = ["aiModels": ["ai.hf.stabilityai/stable-diffusion-xl-base-1.0", "ai.lmstudio.lmstudio-community"]]
+            let models = await render(MainWindowRoot(model: model), size: NSSize(width: 980, height: 600), title: "Ballast", dark: dark)
+            save(frame(models), dir.appending(path: "models\(suffix).png"))
+
             model.selection = SafeView.id
             model.checked = [:]
             let safe = await render(MainWindowRoot(model: model), size: NSSize(width: 980, height: 600), title: "Ballast", dark: dark)
@@ -109,7 +114,13 @@ import SwiftUI
             report("aiModels", [
                 item("ai.ollama.llama3.1:8b", "llama3.1:8b", "Ollama", ".ollama/models/manifests/llama3.1", 4_900 * mb, .review),
                 item("ai.ollama.qwen2.5-coder:14b", "qwen2.5-coder:14b", "Ollama", ".ollama/models/manifests/qwen2.5-coder", 9_000 * mb, .review),
-                item("ai.hf.whisper", "openai/whisper-large-v3", "Hugging Face", ".cache/huggingface/hub/models--openai--whisper-large-v3", 3_100 * mb, .review),
+                item("ai.hf.openai/whisper-large-v3", "openai/whisper-large-v3 (Hugging Face)", "~/.cache/huggingface/hub/models--openai--whisper-large-v3",
+                     ".cache/huggingface/hub/models--openai--whisper-large-v3", 3_100 * mb, .review),
+                item("ai.hf.stabilityai/stable-diffusion-xl-base-1.0", "stabilityai/stable-diffusion-xl-base-1.0 (Hugging Face)",
+                     "~/.cache/huggingface/hub/models--stabilityai--stable-diffusion-xl-base-1.0",
+                     ".cache/huggingface/hub/models--stabilityai--stable-diffusion-xl-base-1.0", 13_900 * mb, .review),
+                item("ai.lmstudio.lmstudio-community", "lmstudio-community (LM Studio)", "~/.lmstudio/models/lmstudio-community",
+                     ".lmstudio/models/lmstudio-community", 4_400 * mb, .review),
             ]),
             report("databases", [
                 item("db.postgresql@14", "postgresql@14", "Homebrew · data in /opt/homebrew/var/postgresql@14", "postgres14", 3_400 * mb, .yourData, [.running]),

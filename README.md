@@ -11,20 +11,31 @@
   <img src="docs/screenshots/main.png" alt="Ballast's main window listing Ruby versions, with the default and pinned versions marked and three old versions ticked for removal">
 </picture>
 
-Ballast looks at the things that quietly fill a developer's disk and shows what each one is, how big it is, and whether anything still uses it:
+Old Ruby and Node versions, `node_modules` in projects you forgot about, simulator runtimes, Docker images, package caches, AI models you tried once. Developer tools leave tens of gigabytes behind, and most clean-up apps either can't see them or can't tell what's still in use. Ballast knows which version your projects pin, which worktree still has unpushed work and which database is running, and it shows you exactly what it will do before it does anything.
 
-- **Developer toolchains:** Ruby, Node and Python versions (rvm, rbenv, chruby, frum, asdf, mise, nvm, fnm, n, nodenv, pyenv, uv), conda environments, pipx apps and Poetry, Pipenv and Hatch virtualenvs; Java, Go, Rust, Elixir, PHP and other languages (SDKMAN, goenv, rustup, asdf, mise); Homebrew leftovers, GitHub Actions runners
-- **Xcode and Android:** Xcode versions, simulators, runtimes, device support for iOS, watchOS, tvOS and visionOS, simulator logs and docs; Android system images, NDKs and emulators
-- **Containers and VMs:** Docker images, volumes and build cache, Docker Desktop itself, Colima, Lima, minikube, Podman and Rancher Desktop machines, and Parallels and VMware virtual machines
-- **Project leftovers:** build output in projects you haven't touched for a while (`node_modules`, `target`, `.venv`, `.next`, `Pods`, `.gradle`, `_build` and more), and git worktrees whose pull request is merged
-- **Caches:** package manager caches (npm, Yarn, pnpm, Bun, Deno, pip, uv, Poetry, conda, Cargo, Go modules, Gradle, Maven, sbt, CocoaPods, Carthage, SwiftPM, NuGet, Composer and more) and large app caches
-- **Local databases:** Postgres, MySQL, Redis and others from Homebrew, Postgres.app and DBngin
-- **AI models:** Ollama, Hugging Face, Whisper, LM Studio, GPT4All, Jan, llama.cpp, DiffusionBee and PyTorch Hub models
-- **AI tools and editors:** caches and old workspace data of Cursor, VS Code, Windsurf and the Claude app, old Claude Code versions, and Claude Code history for projects that no longer exist
-- **Apps:** your apps with their size and when you last opened them, removed together with their leftovers
-- **Large personal files:** the biggest files in your home folder, only when you ask
+- **Sees developer clutter** that general cleaners miss, across more than 60 tools.
+- **Knows what's in use:** versions your projects pin or you use by default, running databases, worktrees with open pull requests.
+- **Previews every step**, says whether each one can be undone, and asks harder the more there is to lose.
+- **Asks for no permissions up front,** needs no account and has no analytics.
 
-The menu bar icon shows free space at a glance. Click it for a summary, or open the main window to review and remove things.
+## What it finds
+
+| | |
+|---|---|
+| **Developer toolchains** | Ruby, Node and Python versions (rvm, rbenv, chruby, frum, asdf, mise, nvm, fnm, n, nodenv, pyenv, uv), conda environments, pipx apps and Poetry, Pipenv and Hatch virtualenvs; Java, Go, Rust, Elixir, PHP and other languages (SDKMAN, goenv, rustup, asdf, mise); Homebrew leftovers and runaway service logs, GitHub Actions runners |
+| **Xcode and Android** | Xcode versions, simulators, runtimes, device support for iOS, watchOS, tvOS and visionOS, simulator logs and docs; Android system images, NDKs and emulators |
+| **Containers and VMs** | Docker images, volumes and build cache, Docker Desktop itself, Colima, Lima, minikube, Podman and Rancher Desktop machines, Parallels and VMware virtual machines |
+| **Project leftovers** | Build output in projects you haven't touched for a while (`node_modules`, `target`, `.venv`, `.next`, `Pods`, `.gradle`, `_build` and more), and git worktrees whose pull request is merged |
+| **Caches** | Package manager caches (npm, Yarn, pnpm, Bun, Deno, pip, uv, Poetry, conda, Cargo, Go modules, Gradle, Maven, sbt, CocoaPods, Carthage, SwiftPM, NuGet, Composer and more) and large app caches |
+| **Local databases** | Postgres, MySQL, Redis and others from Homebrew, Postgres.app and DBngin |
+| **AI models** | Ollama, Hugging Face, Whisper, LM Studio, GPT4All, Jan, llama.cpp, DiffusionBee and PyTorch Hub models |
+| **AI tools and editors** | Caches and old workspace data of Cursor, VS Code, Windsurf and the Claude app, old Claude Code versions, and Claude Code history for projects that no longer exist |
+| **Apps** | Your apps with their size and when you last opened them, removed together with their leftovers and background helpers |
+| **Large personal files** | The biggest files in your home folder, only when you ask, with files in iCloud Drive marked |
+
+## A quick tour
+
+The menu bar icon shows free space at a glance. Click it for a summary of the biggest concerns and what's safe to reclaim, or open the main window to review and remove things.
 
 <p align="center">
 <picture>
@@ -33,18 +44,25 @@ The menu bar icon shows free space at a glance. Click it for a summary, or open 
 </picture>
 </p>
 
-**Safe to reclaim** gathers everything Ballast is sure you can remove: caches, old downloads and build output that come back when needed, and nothing you use. Open it from the menu or the top of the sidebar to see each item, then review and remove a group at a time.
+**Safe to reclaim** gathers everything Ballast is sure you can remove: caches, old downloads and build output that come back when needed, and nothing you use. Review and remove a group at a time.
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/safe-dark.png">
   <img src="docs/screenshots/safe.png" alt="Safe to reclaim: 38.75 GB of simulator runtimes, package caches and old Ruby versions, grouped by tool, each group with a Review and remove button">
 </picture>
 
-Project leftovers shows which `node_modules` and other build folders belong to projects you haven't touched in a while, and which git worktrees are done with: their pull request is merged and nothing is left uncommitted or unpushed.
+**Project leftovers** shows which `node_modules` and other build folders belong to projects you haven't touched in a while, and which git worktrees are done with: their pull request is merged and nothing is left uncommitted or unpushed.
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/projects-dark.png">
   <img src="docs/screenshots/projects.png" alt="Project leftovers: idle node_modules folders and git worktrees, badged with merged or open pull requests and uncommitted changes">
+</picture>
+
+**AI models** lists every model you've downloaded, wherever the tool put it. Ollama models are removed with `ollama rm`, and a blob two models share stays until neither needs it.
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/models-dark.png">
+  <img src="docs/screenshots/models.png" alt="AI models: Ollama, Hugging Face and LM Studio models with their sizes, two ticked for removal">
 </picture>
 
 ## Safety
@@ -78,6 +96,7 @@ Ballast asks for nothing up front. It reads your home folder like any app you ru
 - **Full Disk Access** is only needed for protected locations (some app containers and the Docker disk image). Ballast shows those items as locked and explains how to grant access if you want them measured.
 - **Administrator steps,** such as removing Docker's system helpers, are never run for you. Ballast shows the exact `sudo` command for you to run in Terminal.
 - **Finder** is used to empty the Trash, so macOS asks whether Ballast can control Finder the first time you click Empty Trash. If you said no, Ballast offers to open **Privacy & Security → Automation** so you can allow it.
+- **The network** is used for two things only: a daily check of GitHub for a newer Ballast, and, if you have the GitHub CLI (`gh`) signed in, asking GitHub whether a worktree's pull request is merged.
 
 ## Install
 
