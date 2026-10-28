@@ -28,16 +28,28 @@ import Testing
         guard case .skipped = results.last?.outcome else { Issue.record("expected skipped, got \(String(describing: results.last?.outcome))"); return }
     }
 
-    @Test func trashExplainsItemsOwnedByAnotherUser() async {
+    @Test func readOnlyFolderOfYoursIsTrashed() async {
+        // Go's module cache is read-only on purpose; it's still yours to move.
         let f = Fixture()
-        let app = f.dir("Applications/Root.app")
-        f.file("Applications/Root.app/Contents/x", bytes: 10)
-        chmod(app.path, 0o555)
+        let mod = f.dir("go/pkg/mod")
+        f.file("go/pkg/mod/x@v1/a.go", bytes: 10)
+        chmod(mod.path, 0o555)
+        let results = await run(f, [Step("Trash", .trash([mod]), itemID: "a")],
+                                items: [Item(id: "a", title: "Go", paths: [mod], bytes: 0, risk: .regenerable)])
+        #expect(results.first?.outcome == .done)
+        #expect(!FileManager.default.fileExists(atPath: mod.path))
+    }
+
+    @Test func readOnlyParentIsExplained() async {
+        let f = Fixture()
+        let parent = f.dir("Applications/Locked")
+        let app = f.file("Applications/Locked/Tool.app", bytes: 10)
+        chmod(parent.path, 0o555)
         let results = await run(f, [Step("Trash", .trash([app]), itemID: "a")],
-                                items: [Item(id: "a", title: "Root", paths: [app], bytes: 0, risk: .review)])
+                                items: [Item(id: "a", title: "Tool", paths: [app], bytes: 0, risk: .review)])
         guard case .failed(let why) = results.first?.outcome else { Issue.record("expected failure"); return }
         #expect(why != Executor.needsFullDiskAccess)
-        #expect(why.contains("Finder"))
+        #expect(why.contains("read-only"))
         #expect(FileManager.default.fileExists(atPath: app.path))
     }
 
