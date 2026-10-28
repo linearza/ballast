@@ -16,7 +16,8 @@ import UserNotifications
         if let v = defaults.string(forKey: "latestVersion"), let u = defaults.url(forKey: "latestURL").flatMap({ releaseLink($0.absoluteString) }) { offer(v, u) }
     }
 
-    func check() async {
+    /// `notifying` false still finds the release, for Settings, and leaves the notification for a later check.
+    func check(notifying: Bool = true) async {
         guard repo.contains("/") else { return }
         let last = defaults.object(forKey: "lastUpdateCheck") as? Date ?? .distantPast
         guard Date().timeIntervalSince(last) > 86_400,
@@ -33,7 +34,7 @@ import UserNotifications
         defaults.set(version, forKey: "latestVersion")
         defaults.set(url, forKey: "latestURL")
         offer(version, url)
-        if let available, defaults.string(forKey: "notifiedVersion") != available.version {
+        if notifying, let available, defaults.string(forKey: "notifiedVersion") != available.version {
             defaults.set(available.version, forKey: "notifiedVersion")
             await notify(available)
         }

@@ -131,7 +131,7 @@ Ballast is not notarised, so macOS blocks it the first time. Either open **Syste
 xattr -dr com.apple.quarantine ~/Applications/Ballast.app
 ```
 
-Ballast checks GitHub once a day for a newer release. When there is one, it sends a notification and shows a link in the menu. It never updates itself.
+Ballast checks GitHub once a day for a newer release. When there is one, it sends a notification and shows a link in the menu. It never updates itself, and it stays silent in quiet mode.
 
 ## First run
 
@@ -151,6 +151,7 @@ Ballast asks where your projects live. It uses those folders to see which langua
 - When to warn about low free space (10% by default)
 - How long a project must be idle before its build output (`node_modules`, `target`, `.venv` and the like) counts as safe (60 days by default)
 - Open at login
+- Quiet mode: no menu bar icon and no notifications, while background rescans carry on. **Go Quiet…** in the menu's gear menu turns it on too. It stays on until you turn it off. While quiet, open Ballast from Applications or Spotlight to see its window, and press ⌘, for Settings.
 
 ## Uninstall
 

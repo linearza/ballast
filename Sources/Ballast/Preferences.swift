@@ -24,6 +24,10 @@ import Foundation
     var idleDays: Int {
         didSet { defaults.set(idleDays, forKey: "idleDays") }
     }
+    /// No menu bar icon and no notifications, until turned off in Settings.
+    var quiet: Bool {
+        didSet { defaults.set(quiet, forKey: "quiet") }
+    }
     /// Set once measuring a protected folder worked, so a later failure means macOS forgot the grant.
     var hadFullDiskAccess: Bool {
         didSet { defaults.set(hadFullDiskAccess, forKey: "hadFullDiskAccess") }
@@ -38,6 +42,7 @@ import Foundation
         rootsConfirmed = defaults.bool(forKey: "rootsConfirmed")
         hadFullDiskAccess = defaults.bool(forKey: "hadFullDiskAccess")
         idleDays = defaults.integer(forKey: "idleDays")
+        quiet = defaults.bool(forKey: "quiet")
     }
 
     var rootURLs: [URL] { projectRoots.map { URL(filePath: $0) } }

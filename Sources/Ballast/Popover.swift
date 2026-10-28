@@ -85,6 +85,7 @@ struct Popover: View {
             Button("Open Ballast") { open(nil) }
             Menu {
                 Button("Settings…") { Windows.shared.showSettings(model) }
+                Button("Go Quiet…") { goQuiet(model) }
                 Divider()
                 Button("Quit Ballast") { NSApp.terminate(nil) }
             } label: { Image(systemName: "gearshape") }

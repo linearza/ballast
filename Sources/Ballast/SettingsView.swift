@@ -34,6 +34,10 @@ struct SettingsView: View {
             SwiftUI.Section("General") {
                 Toggle("Open Ballast at login", isOn: Binding(get: { login.enabled }, set: { login.set($0) }))
                 if let note = login.note { Text(note).font(.caption).foregroundStyle(.secondary) }
+                Toggle("Quiet: hide the menu bar icon and send no notifications",
+                       isOn: Binding(get: { prefs.quiet }, set: { prefs.quiet = $0 }))
+                Text("Ballast keeps rescanning in the background. Open it from Applications or Spotlight to see it, and press ⌘, to get back here.")
+                    .font(.caption).foregroundStyle(.secondary)
                 if let update = model.updates.available {
                     Link("Ballast \(update.version) is out", destination: update.url)
                 } else {
@@ -96,6 +100,17 @@ struct RootsEditor: View {
             }
         }
     }
+}
+
+/// Explains how to reach Ballast before the icon disappears.
+@MainActor func goQuiet(_ model: AppModel) {
+    let alert = NSAlert()
+    alert.messageText = "Go quiet?"
+    alert.informativeText = "Ballast will leave the menu bar and stop sending notifications. It keeps rescanning in the background.\n\nTo use it, open Ballast from Applications or Spotlight. To bring the icon back, turn quiet off in Settings (⌘,)."
+    alert.addButton(withTitle: "Go Quiet")
+    alert.addButton(withTitle: "Cancel")
+    NSApp.activate(ignoringOtherApps: true)
+    if alert.runModal() == .alertFirstButtonReturn { model.prefs.quiet = true }
 }
 
 @MainActor func chooseFolder() -> URL? {
