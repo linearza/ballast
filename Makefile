@@ -9,6 +9,15 @@ REPO     := $(shell git remote get-url origin 2>/dev/null | sed -nE 's|.*github\
 # macro plugin from clean builds; passing its folder explicitly avoids that.
 TESTING_PLUGINS := $(shell dirname "$$(xcrun -f swift 2>/dev/null)")/../lib/swift/host/plugins/testing
 
+# Keep absolute build and home paths out of the binary (they would leak the
+# builder's username into every release).
+PATHMAP := -Xswiftc -file-prefix-map -Xswiftc "$(CURDIR)=." \
+  -Xswiftc -debug-prefix-map -Xswiftc "$(CURDIR)=." \
+  -Xswiftc -file-prefix-map -Xswiftc "$(HOME)=~" \
+  -Xcc -ffile-prefix-map=$(CURDIR)=. \
+  -Xcc -ffile-prefix-map=$(HOME)=~ \
+  -Xlinker -S
+
 .PHONY: build test app install uninstall release notarize icon screenshots check clean
 
 check:
@@ -16,13 +25,13 @@ check:
 	  echo "Ballast needs Swift 6. Install the Command Line Tools: xcode-select --install"; exit 1; }
 
 build: check
-	swift build -c release
+	swift build -c release $(PATHMAP)
 
 test: check
 	swift test -Xswiftc -plugin-path -Xswiftc "$(TESTING_PLUGINS)"
 
 app: build
-	BALLAST_REPO="$(REPO)" scripts/bundle.sh "$$(swift build -c release --show-bin-path)/$(APP)" "$(BUNDLE)" "$(VERSION)"
+	BALLAST_REPO="$(REPO)" scripts/bundle.sh "$$(swift build -c release $(PATHMAP) --show-bin-path)/$(APP)" "$(BUNDLE)" "$(VERSION)"
 
 install: app
 	@osascript -e 'quit app "$(APP)"' 2>/dev/null || true
@@ -41,8 +50,8 @@ uninstall:
 	@echo "Ballast removed. It's in the Trash."
 
 release: check
-	swift build -c release --arch arm64 --arch x86_64
-	BALLAST_REPO="$(REPO)" scripts/bundle.sh "$$(swift build -c release --arch arm64 --arch x86_64 --show-bin-path)/$(APP)" "$(BUNDLE)" "$(VERSION)"
+	swift build -c release --arch arm64 --arch x86_64 $(PATHMAP)
+	BALLAST_REPO="$(REPO)" scripts/bundle.sh "$$(swift build -c release --arch arm64 --arch x86_64 $(PATHMAP) --show-bin-path)/$(APP)" "$(BUNDLE)" "$(VERSION)"
 	cd $(DIST) && rm -f $(APP)-$(VERSION).zip && ditto -c -k --keepParent $(APP).app $(APP)-$(VERSION).zip
 	@echo "$(DIST)/$(APP)-$(VERSION).zip"
 
