@@ -1,6 +1,6 @@
 import Foundation
 
-/// Node versions from nvm, fnm, Volta, asdf and mise.
+/// Node versions from nvm, fnm, Volta, n, nodenv, asdf and mise.
 public struct NodeProvider: Provider {
     public init() {}
     public let id = "node"
@@ -9,10 +9,12 @@ public struct NodeProvider: Provider {
     public let symbol = "hexagon"
 
     static let fnmDirs = ["Library/Application Support/fnm/node-versions", ".local/share/fnm/node-versions"]
+    /// Where `n` keeps versions with its default prefix.
+    static let nDir = "usr/local/n/versions/node"
 
     public func isPresent(_ env: Environment) async -> Bool {
-        ([".nvm/versions/node", ".volta/tools/image/node", ".asdf/installs/nodejs"] + Self.fnmDirs).contains { exists(env.path($0)) }
-            || exists(miseInstalls(env, tool: "node"))
+        ([".nvm/versions/node", ".volta/tools/image/node", ".nodenv/versions", ".asdf/installs/nodejs"] + Self.fnmDirs).contains { exists(env.path($0)) }
+            || exists(miseInstalls(env, tool: "node")) || exists(env.system(Self.nDir))
     }
 
     public func scan(_ env: Environment, pins: Pins) async -> [Item] {
@@ -49,6 +51,13 @@ public struct NodeProvider: Provider {
             .flatMap { ($0["node"] as? [String: Any])?["runtime"] as? String }
         for v in subfolders(volta) { add("volta", volta, v, isDefault: v == voltaDefault) }
 
+        let n = env.system(Self.nDir)
+        for v in subfolders(n) { add("n", n, v, isDefault: false) }
+
+        let nodenv = env.path(".nodenv/versions")
+        let nodenvDefault = firstLine(env.path(".nodenv/version"))
+        for v in subfolders(nodenv) { add("nodenv", nodenv, v, isDefault: v == nodenvDefault) }
+
         let asdf = env.path(".asdf/installs/nodejs")
         let asdfDefault = asdfGlobal(env, tool: "nodejs")
         for v in subfolders(asdf) { add("asdf", asdf, v, isDefault: v == asdfDefault) }
@@ -84,6 +93,11 @@ public struct NodeProvider: Provider {
             case "nvm" where name == "cache": kind = .shell("\(source) && nvm cache clear")
             case "nvm": kind = .shell("\(source) && nvm uninstall \(shellQuote(name))")
             case "fnm": kind = .command(argv: ["fnm", "uninstall", name])
+            case "nodenv": kind = .command(argv: ["nodenv", "uninstall", "-f", name])
+            // n installs into /usr/local, which often needs an administrator.
+            case "n" where item.paths.allSatisfy({ access($0.deletingLastPathComponent().path, W_OK) == 0 }):
+                kind = .command(argv: ["n", "rm", name])
+            case "n": kind = .copyToTerminal("sudo n rm \(shellQuote(name))")
             case "asdf": kind = .command(argv: ["asdf", "uninstall", "nodejs", name])
             case "mise": kind = .command(argv: ["mise", "uninstall", "node@\(name)"])
             default: kind = .trash(item.paths)

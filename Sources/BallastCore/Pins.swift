@@ -19,11 +19,15 @@ public struct Pins: Sendable, Equatable {
     public var ruby: [String: [String]] = [:]
     public var node: [String: [String]] = [:]
     public var python: [String: [String]] = [:]
+    /// Other languages, by the name `languageName(forTool:)` gives them (`java`, `go`, `rust`, `elixir`…).
+    public var other: [String: [String: [String]]] = [:]
 
-    public init(ruby: [String: [String]] = [:], node: [String: [String]] = [:], python: [String: [String]] = [:]) {
+    public init(ruby: [String: [String]] = [:], node: [String: [String]] = [:], python: [String: [String]] = [:],
+                other: [String: [String: [String]]] = [:]) {
         self.ruby = ruby
         self.node = node
         self.python = python
+        self.other = other
     }
 
     /// The projects whose pin in `map` matches an installed version, sorted.
@@ -94,6 +98,23 @@ func pinMap(forTool tool: String) -> WritableKeyPath<Pins, [String: [String]]>? 
     }
 }
 
+/// The language an asdf or mise tool name installs, for tools other than Ruby, Node and Python.
+func languageName(forTool tool: String) -> String? {
+    switch tool {
+    case "golang", "go": "go"
+    case "java", "rust", "erlang", "elixir", "php", "deno", "bun", "zig", "terraform", "kotlin", "scala", "gradle", "maven": tool
+    default: nil
+    }
+}
+
+/// The channel a `rust-toolchain` or `rust-toolchain.toml` file asks for.
+func rustChannel(_ text: String) -> String? {
+    if let m = text.firstMatch(of: /(?m)^\s*channel\s*=\s*["']([^"']+)["']/) { return String(m.1) }
+    let line = text.split(whereSeparator: \.isNewline).first.map { $0.trimmingCharacters(in: .whitespaces) }
+    guard let line, !line.isEmpty, !line.hasPrefix("["), !line.contains("=") else { return nil }
+    return line
+}
+
 let miseConfigNames = ["mise.toml", ".mise.toml", "mise.local.toml", ".mise.local.toml"]
 
 private let skippedFolders: Set<String> = ["node_modules", ".git", "vendor"]
@@ -107,6 +128,13 @@ public func scanPins(roots: [URL], maxDepth: Int = 3) -> Pins {
             pins[keyPath: map][key, default: []].append(project)
         }
     }
+    func addOther(_ language: String, _ version: String?, _ project: String) {
+        guard let version, version.first?.isNumber == true || version == "stable" || version == "nightly" || version == "beta" else { return }
+        let key = normalizeVersion(version)
+        if pins.other[language, default: [:]][key, default: []].contains(project) == false {
+            pins.other[language, default: [:]][key, default: []].append(project)
+        }
+    }
 
     func visit(_ dir: URL, project: String, depth: Int) {
         let fm = FileManager.default
@@ -118,17 +146,24 @@ public func scanPins(roots: [URL], maxDepth: Int = 3) -> Pins {
         if names.contains(".nvmrc") { add(\.node, firstLine(".nvmrc"), project) }
         if names.contains(".node-version") { add(\.node, firstLine(".node-version"), project) }
         if names.contains(".python-version") { add(\.python, firstLine(".python-version"), project) }
+        if names.contains(".java-version") { addOther("java", firstLine(".java-version"), project) }
+        if names.contains(".go-version") { addOther("go", firstLine(".go-version"), project) }
+        for name in ["rust-toolchain.toml", "rust-toolchain"] where names.contains(name) {
+            addOther("rust", read(name).flatMap(rustChannel), project)
+        }
         if names.contains(".tool-versions"), let text = read(".tool-versions") {
             for line in text.split(whereSeparator: \.isNewline) {
                 let words = line.split(separator: " ").map(String.init)
                 guard let tool = words.first else { continue }
                 if let map = pinMap(forTool: tool) { words.dropFirst().forEach { add(map, $0, project) } }
+                if let language = languageName(forTool: tool) { words.dropFirst().forEach { addOther(language, $0, project) } }
             }
         }
         for name in miseConfigNames where names.contains(name) {
             for (tool, versions) in parseMiseTools(read(name) ?? "") {
                 // `latest` and `lts` don't pin a version.
                 if let map = pinMap(forTool: tool) { versions.filter { $0.first?.isNumber == true }.forEach { add(map, $0, project) } }
+                if let language = languageName(forTool: tool) { versions.forEach { addOther(language, $0, project) } }
             }
         }
         if names.contains("Gemfile"), let text = read("Gemfile"),
