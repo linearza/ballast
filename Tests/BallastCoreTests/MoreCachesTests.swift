@@ -31,4 +31,34 @@ import Testing
         // Poetry's virtualenvs belong to Python, so app caches leave the whole folder alone.
         #expect(PackageCachesProvider.claimedCacheNames.contains("pypoetry"))
     }
+
+    // MARK: Project build output
+
+    @Test func buildOutputInIdleProjects() async throws {
+        let f = Fixture()
+        let old = Date().addingTimeInterval(-200 * 86_400)
+        f.file("Projects/rs/Cargo.toml", contents: "[package]\n", modified: old)
+        f.file("Projects/rs/target/debug/app", bytes: 100)
+        f.file("Projects/py/pyproject.toml", contents: "", modified: old)
+        f.file("Projects/py/.venv/pyvenv.cfg", contents: "home = /usr\n")
+        f.file("Projects/py/venv/notes.txt", bytes: 10)
+        f.file("Projects/web/package.json", contents: "{}", modified: old)
+        f.file("Projects/web/.next/cache/x", bytes: 100)
+        f.file("Projects/web/dist/app.js", bytes: 100)
+        f.file("Projects/ios/Podfile", contents: "", modified: old)
+        f.file("Projects/ios/Pods/x", bytes: 100)
+        f.file("Projects/ex/mix.exs", contents: "", modified: old)
+        f.file("Projects/ex/_build/x", bytes: 100)
+        f.file("Projects/ex/deps/x", bytes: 100)
+        f.file("Projects/notes/target/x", bytes: 100)
+        let items = await ProjectLeftoversProvider().scan(f.env(), pins: Pins())
+        let m = byID(items)
+        let id = { (rel: String) in "project.build.\(f.url(rel).path)" }
+        #expect(Set(m.keys) == Set(["Projects/rs/target", "Projects/py/.venv", "Projects/web/.next", "Projects/web/dist",
+                                    "Projects/ios/Pods", "Projects/ex/_build", "Projects/ex/deps"].map(id)))
+        #expect(m[id("Projects/rs/target")]?.risk == .regenerable)
+        #expect(m[id("Projects/rs/target")]?.title == "rs target")
+        // A package's dist folder may be what it publishes, so it's always a review.
+        #expect(m[id("Projects/web/dist")]?.risk == .review)
+    }
 }

@@ -1,6 +1,6 @@
 import Foundation
 
-/// Leftovers inside your projects: `node_modules` folders and git worktrees.
+/// Leftovers inside your projects: `node_modules` and other build output, and git worktrees.
 public struct ProjectLeftoversProvider: Provider {
     public init(idleDays: Int = 60) { self.idleDays = idleDays }
     public let id = "projects"
@@ -17,8 +17,8 @@ public struct ProjectLeftoversProvider: Provider {
 
     public func scan(_ env: Environment, pins: Pins) async -> [Item] {
         var items: [Item] = []
-        for nm in nodeModules(env.projectRoots) {
-            items.append(await nodeModulesItem(nm, env: env))
+        for found in buildOutput(env.projectRoots) {
+            items.append(await buildItem(found.url, kind: found.kind, env: env))
         }
         for repo in repos(env.projectRoots) {
             items += await worktreeItems(repo, env: env)
@@ -26,40 +26,90 @@ public struct ProjectLeftoversProvider: Provider {
         return await measured(items)
     }
 
-    // MARK: node_modules
+    // MARK: Build output
 
-    /// Every `node_modules` up to four levels under the roots, without descending into one.
-    func nodeModules(_ roots: [URL], maxDepth: Int = 4) -> [URL] {
-        var found: [URL] = []
+    /// A folder a build or package manager makes inside a project, found by its name next to a marker file.
+    struct BuildKind: Sendable {
+        var name: String
+        var label: String
+        /// Paths relative to the project; any one present confirms it. Empty means the name is enough.
+        var markers: [String]
+        /// Some output may be what the project ships, so it never counts as safe.
+        var alwaysReview = false
+    }
+
+    static let gradle = ["build.gradle", "build.gradle.kts", "settings.gradle", "settings.gradle.kts"]
+    static let buildKinds: [BuildKind] = [
+        BuildKind(name: "node_modules", label: "npm packages", markers: []),
+        BuildKind(name: "target", label: "Rust build", markers: ["Cargo.toml"]),
+        BuildKind(name: ".venv", label: "Python virtualenv", markers: [".venv/pyvenv.cfg"]),
+        BuildKind(name: "venv", label: "Python virtualenv", markers: ["venv/pyvenv.cfg"]),
+        BuildKind(name: ".next", label: "Next.js build", markers: ["package.json"]),
+        BuildKind(name: ".nuxt", label: "Nuxt build", markers: ["package.json"]),
+        BuildKind(name: ".turbo", label: "Turborepo cache", markers: ["package.json"]),
+        BuildKind(name: ".svelte-kit", label: "SvelteKit build", markers: ["package.json"]),
+        BuildKind(name: ".parcel-cache", label: "Parcel cache", markers: ["package.json"]),
+        BuildKind(name: ".angular", label: "Angular cache", markers: ["package.json"]),
+        BuildKind(name: "Pods", label: "CocoaPods", markers: ["Podfile"]),
+        BuildKind(name: ".gradle", label: "Gradle cache", markers: gradle),
+        BuildKind(name: "build", label: "Gradle build", markers: gradle),
+        BuildKind(name: "_build", label: "Elixir build", markers: ["mix.exs"]),
+        BuildKind(name: "deps", label: "Elixir dependencies", markers: ["mix.exs"]),
+        BuildKind(name: ".dart_tool", label: "Dart tool cache", markers: ["pubspec.yaml"]),
+        BuildKind(name: "build", label: "Build output", markers: ["package.json"], alwaysReview: true),
+        BuildKind(name: "dist", label: "Build output", markers: ["package.json"], alwaysReview: true),
+    ]
+    static let buildNames = Set(buildKinds.map(\.name))
+
+    /// Build output up to four levels under the roots, without descending into any of it or into hidden folders.
+    func buildOutput(_ roots: [URL], maxDepth: Int = 4) -> [(url: URL, kind: BuildKind)] {
+        let fm = FileManager.default
+        var found: [(url: URL, kind: BuildKind)] = []
+        func isDir(_ url: URL) -> Bool {
+            var st = stat()
+            return lstat(url.path, &st) == 0 && (st.st_mode & S_IFMT) == S_IFDIR
+        }
         func visit(_ dir: URL, depth: Int) {
-            for name in subfolders(dir) where !name.hasPrefix(".") {
-                let url = dir.appending(path: name)
-                if name == "node_modules" { found.append(url) } else if depth < maxDepth { visit(url, depth: depth + 1) }
+            let names = ((try? fm.contentsOfDirectory(atPath: dir.path)) ?? []).sorted()
+            var claimed = Set<String>()
+            for name in names where Self.buildNames.contains(name) && isDir(dir.appending(path: name)) {
+                if let kind = Self.buildKinds.first(where: { k in
+                    k.name == name && (k.markers.isEmpty || k.markers.contains { exists(dir.appending(path: $0)) })
+                }) {
+                    found.append((dir.appending(path: name), kind))
+                    claimed.insert(name)
+                }
+            }
+            guard depth < maxDepth else { return }
+            for name in names where !name.hasPrefix(".") && !claimed.contains(name) && name != "node_modules" && isDir(dir.appending(path: name)) {
+                visit(dir.appending(path: name), depth: depth + 1)
             }
         }
         roots.forEach { visit($0, depth: 1) }
         return found
     }
 
-    func nodeModulesItem(_ nm: URL, env: Environment) async -> Item {
-        let project = nm.deletingLastPathComponent()
+    func buildItem(_ url: URL, kind: BuildKind, env: Environment) async -> Item {
+        let project = url.deletingLastPathComponent()
         let last = await lastActivity(project, env: env)
         let idle = last.map { env.now().timeIntervalSince($0) >= Double(idleDays) * 86_400 } ?? true
         let name = project.lastPathComponent
         let when = last.map { $0.formatted(date: .abbreviated, time: .omitted) } ?? "unknown"
-        return Item(id: "project.nm.\(nm.path)", title: "\(name) node_modules", detail: "Last activity \(when)",
-                    paths: [nm], bytes: 0, risk: idle ? .regenerable : .review,
+        let id = kind.name == "node_modules" ? "project.nm.\(url.path)" : "project.build.\(url.path)"
+        let detail = kind.name == "node_modules" ? "Last activity \(when)" : "\(kind.label) · last activity \(when)"
+        return Item(id: id, title: "\(name) \(kind.name)", detail: detail,
+                    paths: [url], bytes: 0, risk: idle && !kind.alwaysReview ? .regenerable : .review,
                     badges: idle ? [] : last.map { [.lastUsed($0)] } ?? [])
     }
 
-    /// The last commit date, or the newest top-level file when the project isn't a repo.
+    /// The last commit date, or the newest top-level file when the project isn't a repo. Build output doesn't count.
     func lastActivity(_ project: URL, env: Environment) async -> Date? {
         let r = await env.runner.run(["git", "-C", project.path, "log", "-1", "--format=%cI"], timeout: .seconds(10))
         if r.ok, let d = ISO8601DateFormatter().date(from: r.stdout.trimmingCharacters(in: .whitespacesAndNewlines)) {
             return d
         }
         let names = (try? FileManager.default.contentsOfDirectory(atPath: project.path)) ?? []
-        return names.filter { $0 != "node_modules" }.compactMap { name in
+        return names.filter { !Self.buildNames.contains($0) }.compactMap { name in
             try? FileManager.default.attributesOfItem(atPath: project.appending(path: name).path)[.modificationDate] as? Date
         }.max()
     }
