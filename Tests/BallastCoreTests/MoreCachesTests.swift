@@ -163,3 +163,47 @@ import Testing
         #expect(!caches.contains { $0.paths.contains(f.url("Library/Caches/llama.cpp")) })
     }
 }
+
+@Suite struct EditorsTests {
+    @Test func claudeCodeVersionsAndOrphanedProjects() async throws {
+        let f = Fixture()
+        for v in ["2.1.308", "2.1.309", "2.1.310", "2.1.311"] { f.file(".local/share/claude/versions/\(v)", bytes: 100) }
+        f.link(".local/bin/claude", to: ".local/share/claude/versions/2.1.310")
+        let live = f.dir("Projects/app")
+        f.file(".claude/projects/-live/a.jsonl", contents: #"{"type":"mode"}"# + "\n" + #"{"cwd":"\#(live.path)","x":1}"# + "\n")
+        f.file(".claude/projects/-gone/b.jsonl", contents: #"{"cwd":"\#(f.url("Projects/deleted").path)"}"# + "\n")
+        let items = await EditorsProvider(isRunning: { _ in false }).scan(f.env(), pins: Pins())
+        let ids = Set(items.map(\.id))
+        // The newest and the one in use stay.
+        #expect(ids.isSuperset(of: ["editors.claude.version.2.1.308", "editors.claude.version.2.1.309"]))
+        #expect(!ids.contains("editors.claude.version.2.1.310"))
+        #expect(!ids.contains("editors.claude.version.2.1.311"))
+        // Only projects whose folder is gone.
+        #expect(ids.contains("editors.claude.project.-gone"))
+        #expect(!ids.contains("editors.claude.project.-live"))
+        #expect(items.first { $0.id == "editors.claude.project.-gone" }?.risk == .review)
+    }
+
+    @Test func electronEditorCachesAndChats() async throws {
+        let f = Fixture()
+        let cursor = "Library/Application Support/Cursor"
+        for rel in ["CachedData", "Cache", "logs", "User/workspaceStorage", "User/globalStorage"] { f.file("\(cursor)/\(rel)/x", bytes: 100) }
+        f.file("\(cursor)/User/globalStorage/state.vscdb", bytes: 100)
+        f.file(".local/share/opencode/log/x.log", bytes: 100)
+        f.file(".local/share/opencode/storage/session/x.json", bytes: 100)
+        let env = f.env()
+        let p = EditorsProvider(isRunning: { _ in false })
+        let items = await p.scan(env, pins: Pins())
+        let m = Dictionary(uniqueKeysWithValues: items.map { ($0.id, $0) })
+        #expect(m["editors.cursor.cache"]?.risk == .regenerable)
+        #expect(m["editors.cursor.cache"]?.paths.contains(f.url("\(cursor)/CachedData")) == true)
+        #expect(m["editors.cursor.workspaces"]?.risk == .review)
+        #expect(m["editors.cursor.state"]?.risk == .yourData)
+        #expect(m["editors.opencode.logs"]?.risk == .regenerable)
+        #expect(m["editors.opencode.sessions"]?.risk == .yourData)
+        // Chats and settings are shown for their size but never removed.
+        let plan = await p.plan(["editors.cursor.state", "editors.cursor.cache"], items: items, env: env)
+        #expect(plan.refusals.map(\.itemID) == ["editors.cursor.state"])
+        #expect(plan.steps.count == 1)
+    }
+}

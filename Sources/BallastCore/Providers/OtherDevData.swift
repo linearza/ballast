@@ -9,9 +9,6 @@ public struct OtherDevDataProvider: Provider {
     public let symbol = "ellipsis.circle"
 
     static let entries: [(id: String, title: String, rel: String, hint: String)] = [
-        ("cursorWorkspaces", "Cursor workspace storage", "Library/Application Support/Cursor/User/workspaceStorage", "Per-project editor state; rebuilt when you reopen a project"),
-        ("vscodeWorkspaces", "VS Code workspace storage", "Library/Application Support/Code/User/workspaceStorage", "Per-project editor state; rebuilt when you reopen a project"),
-        ("claudeVMs", "Claude VM bundles", "Library/Application Support/Claude/vm_bundles", "Prefer clearing from inside Claude"),
         ("puppeteer", "Puppeteer browsers", ".cache/puppeteer", "Downloaded again on next install"),
         ("devtoolsMCP", "Chrome DevTools MCP cache", ".cache/chrome-devtools-mcp", "Downloaded again when needed"),
     ]

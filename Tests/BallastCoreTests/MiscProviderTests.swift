@@ -162,9 +162,9 @@ import Testing
 
     @Test func otherDevDataHints() async throws {
         let f = Fixture()
-        f.file("Library/Application Support/Claude/vm_bundles/x", bytes: 100)
+        f.file(".cache/puppeteer/chrome/x", bytes: 100)
         let items = await OtherDevDataProvider().scan(f.env(), pins: Pins())
-        #expect(items.first?.detail == "Prefer clearing from inside Claude")
+        #expect(items.first?.detail == "Downloaded again on next install")
         #expect(items.first?.risk == .review)
     }
 }

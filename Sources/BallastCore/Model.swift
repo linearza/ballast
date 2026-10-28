@@ -72,6 +72,7 @@ public enum Section: String, CaseIterable, Codable, Sendable {
     case caches = "Caches"
     case databases = "Local databases"
     case ai = "AI models"
+    case editors = "AI tools and editors"
     case apps = "Apps"
     case personal = "Large personal files"
     case other = "Other dev data"
