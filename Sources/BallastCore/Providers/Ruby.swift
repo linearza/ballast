@@ -1,6 +1,6 @@
 import Foundation
 
-/// Ruby versions from RVM, rbenv, asdf and mise, each with its gems.
+/// Ruby versions from RVM, rbenv, chruby, frum, asdf and mise, each with its gems.
 public struct RubyProvider: Provider {
     public init() {}
     public let id = "ruby"
@@ -11,7 +11,7 @@ public struct RubyProvider: Provider {
     static let implode = "ruby.rvm.implode"
 
     public func isPresent(_ env: Environment) async -> Bool {
-        [".rvm/rubies", ".rbenv/versions", ".asdf/installs/ruby"].contains { exists(env.path($0)) }
+        [".rvm/rubies", ".rbenv/versions", ".rubies", ".frum/versions", ".asdf/installs/ruby"].contains { exists(env.path($0)) }
             || exists(miseInstalls(env, tool: "ruby"))
     }
 
@@ -47,10 +47,23 @@ public struct RubyProvider: Provider {
                               paths: [rvm.appending(path: "backup")], bytes: 0, risk: .review))
         }
 
-        // rbenv, asdf and mise keep one folder per version; gems live inside it.
+        // chruby's folders are named ruby-X (or jruby-X), and it has no default of its own.
+        for name in subfolders(env.path(".rubies")) {
+            let version = name.hasPrefix("ruby-") ? String(name.dropFirst(5)) : name
+            var badges = Set<Badge>()
+            if let pin = pinBadge(pins, pins.ruby, installed: version) { badges.insert(pin) }
+            items.append(Item(id: "ruby.chruby.\(version)", title: name.hasPrefix("ruby-") ? "Ruby \(version)" : name,
+                              detail: "chruby · with gems", paths: [env.path(".rubies/\(name)")], bytes: 0,
+                              risk: .regenerable, badges: badges))
+        }
+
+        // rbenv, frum, asdf and mise keep one folder per version; gems live inside it.
         let mise = miseInstalls(env, tool: "ruby")
+        let frumDefault = (try? FileManager.default.destinationOfSymbolicLink(atPath: env.path(".frum/aliases/default").path))
+            .map { URL(filePath: $0).lastPathComponent }
         let managers: [(key: String, dir: URL, def: String?)] = [
             ("rbenv", env.path(".rbenv/versions"), firstLine(env.path(".rbenv/version"))),
+            ("frum", env.path(".frum/versions"), frumDefault),
             ("asdf", env.path(".asdf/installs/ruby"), asdfGlobal(env, tool: "ruby")),
             ("mise", mise, miseGlobal(env, tools: ["ruby"], installed: subfolders(mise))),
         ]
@@ -91,6 +104,8 @@ public struct RubyProvider: Provider {
                 let name = item.paths.first?.lastPathComponent ?? "ruby-\(version)"
                 kind = .shell("\(source) && rvm remove \(shellQuote(name)) --gems")
             case ("rbenv", _): kind = .command(argv: ["rbenv", "uninstall", "-f", version])
+            case ("frum", _): kind = .command(argv: ["frum", "uninstall", version])
+            case ("chruby", _): kind = .trash(item.paths)
             case ("mise", _): kind = .command(argv: ["mise", "uninstall", "ruby@\(version)"])
             default: kind = .command(argv: ["asdf", "uninstall", "ruby", version])
             }

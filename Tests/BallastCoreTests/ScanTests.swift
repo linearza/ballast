@@ -24,7 +24,7 @@ import Testing
     @Test func writesSummary() async throws {
         let f = Fixture()
         f.file(".npm/_cacache/a", bytes: 50_000)
-        f.file("Library/Application Support/Claude/vm_bundles/x", bytes: 200_000)
+        f.file(".cache/puppeteer/x", bytes: 200_000)
         let s = scanner(f, [PackageCachesProvider(), OtherDevDataProvider()])
         _ = await s.scan(background: true)
         #expect(FileManager.default.fileExists(atPath: f.url("state/summary.json").path))

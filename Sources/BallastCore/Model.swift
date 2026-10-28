@@ -1,7 +1,7 @@
 import Foundation
 
 public enum BallastCore {
-    public static let version = "0.1.1"
+    public static let version = "0.2.0"
 }
 
 /// How safe an item is to remove.
@@ -72,6 +72,7 @@ public enum Section: String, CaseIterable, Codable, Sendable {
     case caches = "Caches"
     case databases = "Local databases"
     case ai = "AI models"
+    case editors = "AI tools and editors"
     case apps = "Apps"
     case personal = "Large personal files"
     case other = "Other dev data"

@@ -20,7 +20,7 @@ import Foundation
     var rootsConfirmed: Bool {
         didSet { defaults.set(rootsConfirmed, forKey: "rootsConfirmed") }
     }
-    /// Days without activity before a project's node_modules counts as safe to remove.
+    /// Days without activity before a project's build output (node_modules, target, .venv…) counts as safe to remove.
     var idleDays: Int {
         didSet { defaults.set(idleDays, forKey: "idleDays") }
     }

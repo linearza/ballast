@@ -20,7 +20,8 @@ public struct AppCachesProvider: Provider {
 
     public func scan(_ env: Environment, pins: Pins) async -> [Item] {
         let dir = env.path("Library/Caches")
-        let names = subfolders(dir).filter { !$0.hasPrefix("com.apple.") && !$0.hasPrefix(".") && !PackageCachesProvider.claimedCacheNames.contains($0) }
+        let names = subfolders(dir).filter { !$0.hasPrefix("com.apple.") && !$0.hasPrefix(".") && !PackageCachesProvider.claimedCacheNames.contains($0)
+            && !AIModelsProvider.claimedCacheNames.contains($0) }
         var items: [Item] = []
         for name in names.sorted() {
             let url = dir.appending(path: name)

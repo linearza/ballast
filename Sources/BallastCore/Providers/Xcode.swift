@@ -12,7 +12,12 @@ public struct XcodeProvider: Provider {
         ("deriveddata", "Library/Developer/Xcode/DerivedData", "Derived data", .regenerable),
         ("archives", "Library/Developer/Xcode/Archives", "Archives", .review),
         ("devicesupport", "Library/Developer/Xcode/iOS DeviceSupport", "iOS device support", .regenerable),
+        ("watchsupport", "Library/Developer/Xcode/watchOS DeviceSupport", "watchOS device support", .regenerable),
+        ("tvsupport", "Library/Developer/Xcode/tvOS DeviceSupport", "tvOS device support", .regenerable),
+        ("visionsupport", "Library/Developer/Xcode/visionOS DeviceSupport", "visionOS device support", .regenerable),
         ("simcaches", "Library/Developer/CoreSimulator/Caches", "Simulator caches", .regenerable),
+        ("simlogs", "Library/Logs/CoreSimulator", "Simulator logs", .regenerable),
+        ("docs", "Library/Developer/Xcode/DocumentationCache", "Documentation cache", .regenerable),
     ]
 
     func xcodes(_ env: Environment) -> [(url: URL, version: String)] {

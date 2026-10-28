@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.2.0 — 2026-10-28
+
+Ballast now recognises far more of the tools developers use.
+
+- **Version managers:** chruby and frum for Ruby; n and nodenv for Node; uv-installed Pythons, conda environments, pipx apps and Poetry, Pipenv and Hatch virtualenvs.
+- **Other languages:** a new section for Java (SDKMAN and installed JDKs), Go (goenv and `~/sdk`), Rust toolchains (rustup), Elixir, PHP and any tool installed with asdf or mise. Projects can pin these with `.java-version`, `.go-version`, `rust-toolchain.toml`, `.tool-versions` or `mise.toml`.
+- **Project build output:** besides `node_modules`, idle projects' `target`, `.venv`, `.next`, `.nuxt`, `.turbo`, `.svelte-kit`, `.parcel-cache`, `.angular`, `Pods`, `.gradle`, `_build`, `deps` and `.dart_tool` folders. `build` and `dist` in JavaScript projects are listed for review.
+- **Caches:** Bun, Deno, uv, Poetry, conda packages, Go modules, SwiftPM, Carthage, Maven, Ivy, sbt, Coursier, NuGet, Composer, Bundler and Electron.
+- **Containers and VMs:** Colima, Lima, minikube, Podman and Rancher Desktop machines, plus Parallels and VMware virtual machines. OrbStack and UTM are shown but left alone.
+- **Xcode and Android:** watchOS, tvOS and visionOS device support, simulator logs and Xcode documentation; Android system images, NDKs and emulators.
+- **Databases:** Postgres.app and DBngin, and databases are found without Homebrew too.
+- **AI models:** GPT4All, Jan, llama.cpp, DiffusionBee and PyTorch Hub models.
+- **AI tools and editors:** a new section for Cursor, VS Code, Windsurf and Claude app caches and old workspace data, old Claude Code versions, and Claude Code history for projects whose folder is gone. Items of a running editor aren't removed.
+- Read-only folders you own, such as Go's module cache, can now be moved to the Trash. When the folder an item is in is read-only, Ballast says so instead of asking for Full Disk Access.
+- The idle-time setting now covers all project build output, not only `node_modules`.
+
 ## 0.1.1 — 2026-10-27
 
 Fixes from a security and feature review.

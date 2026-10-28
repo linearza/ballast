@@ -109,16 +109,21 @@ public final class Executor: Sendable {
     }
 
     public static let ownedByAnotherUser = "Installed for all users. Move it to the Trash in Finder, which asks for your password"
+    public static let readOnlyParent = "Its folder is read-only. Move it to the Trash in Finder"
 
     /// Moving needs write access to the parent folder, and to a folder itself. Without it, the item belongs to
     /// another user (often root: App Store apps, Xcode), which Full Disk Access doesn't change.
+    /// A read-only folder of your own (Go's module cache) is made writable first.
     /// EPERM is left alone: that's macOS privacy protection, which Full Disk Access does fix.
     func ownedByAnotherUser(_ url: URL) -> String? {
         var isDir: ObjCBool = false
-        let checks = [url.deletingLastPathComponent()]
-            + (FileManager.default.fileExists(atPath: url.path, isDirectory: &isDir) && isDir.boolValue && !isSymlink(url) ? [url] : [])
-        for dir in checks where access(dir.path, W_OK) != 0 && errno == EACCES {
-            return Self.ownedByAnotherUser
+        let isFolder = FileManager.default.fileExists(atPath: url.path, isDirectory: &isDir) && isDir.boolValue && !isSymlink(url)
+        var st = stat()
+        if isFolder, access(url.path, W_OK) != 0, stat(url.path, &st) == 0, st.st_uid == getuid() {
+            chmod(url.path, st.st_mode | S_IWUSR)
+        }
+        for dir in [url.deletingLastPathComponent()] + (isFolder ? [url] : []) where access(dir.path, W_OK) != 0 && errno == EACCES {
+            return stat(dir.path, &st) == 0 && st.st_uid == getuid() ? Self.readOnlyParent : Self.ownedByAnotherUser
         }
         return nil
     }

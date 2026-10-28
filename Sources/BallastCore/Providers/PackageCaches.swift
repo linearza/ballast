@@ -8,30 +8,51 @@ public struct PackageCachesProvider: Provider {
     public let section = Section.caches
     public let symbol = "shippingbox.circle"
 
-    static let caches: [(key: String, title: String, rel: String, argv: [String]?)] = [
-        ("npm", "npm", ".npm/_cacache", ["npm", "cache", "clean", "--force"]),
-        ("pnpm", "pnpm", "Library/pnpm/store", ["pnpm", "store", "prune"]),
-        ("yarn", "Yarn (classic)", "Library/Caches/Yarn", ["yarn", "cache", "clean"]),
-        ("yarnBerry", "Yarn Berry", ".yarn/berry/cache", nil),
-        ("pip", "pip", "Library/Caches/pip", ["pip3", "cache", "purge"]),
-        ("cargo", "Cargo", ".cargo/registry", nil),
-        ("go", "Go", "Library/Caches/go-build", ["go", "clean", "-cache"]),
-        ("cocoapods", "CocoaPods", "Library/Caches/CocoaPods", ["pod", "cache", "clean", "--all"]),
-        ("gradle", "Gradle", ".gradle/caches", nil),
+    /// Each cache can live in several places; the item holds the ones that exist.
+    static let caches: [(key: String, title: String, rels: [String], argv: [String]?)] = [
+        ("npm", "npm", [".npm/_cacache"], ["npm", "cache", "clean", "--force"]),
+        ("pnpm", "pnpm", ["Library/pnpm/store"], ["pnpm", "store", "prune"]),
+        ("yarn", "Yarn (classic)", ["Library/Caches/Yarn"], ["yarn", "cache", "clean"]),
+        ("yarnBerry", "Yarn Berry", [".yarn/berry/cache"], nil),
+        ("bun", "Bun", [".bun/install/cache"], ["bun", "pm", "cache", "rm"]),
+        ("deno", "Deno", ["Library/Caches/deno"], nil),
+        ("pip", "pip", ["Library/Caches/pip"], ["pip3", "cache", "purge"]),
+        ("uv", "uv", [".cache/uv"], ["uv", "cache", "clean"]),
+        ("poetry", "Poetry", ["Library/Caches/pypoetry/cache", "Library/Caches/pypoetry/artifacts"], nil),
+        ("conda", "conda package", ["miniforge3/pkgs", "miniconda3/pkgs", "anaconda3/pkgs", "mambaforge/pkgs", ".conda/pkgs"],
+         ["conda", "clean", "--all", "-y"]),
+        ("cargo", "Cargo", [".cargo/registry"], nil),
+        ("go", "Go build", ["Library/Caches/go-build"], ["go", "clean", "-cache"]),
+        ("gomod", "Go module", ["go/pkg/mod"], ["go", "clean", "-modcache"]),
+        ("cocoapods", "CocoaPods", ["Library/Caches/CocoaPods"], ["pod", "cache", "clean", "--all"]),
+        ("swiftpm", "Swift Package Manager", ["Library/Caches/org.swift.swiftpm"], nil),
+        ("carthage", "Carthage", ["Library/Caches/org.carthage.CarthageKit"], nil),
+        ("gradle", "Gradle", [".gradle/caches"], nil),
+        ("maven", "Maven", [".m2/repository"], nil),
+        ("ivy", "Ivy", [".ivy2/cache"], nil),
+        ("sbt", "sbt", [".sbt/boot"], nil),
+        ("coursier", "Coursier", ["Library/Caches/Coursier"], nil),
+        ("nuget", "NuGet", [".nuget/packages"], ["dotnet", "nuget", "locals", "all", "--clear"]),
+        ("composer", "Composer", ["Library/Caches/composer", ".composer/cache"], ["composer", "clear-cache"]),
+        ("bundler", "Bundler", [".bundle/cache"], nil),
+        ("electron", "Electron download", ["Library/Caches/electron"], nil),
     ]
 
     /// Folders in ~/Library/Caches that belong to this provider, so AppCaches leaves them out.
-    static let claimedCacheNames: Set<String> = Set(caches.compactMap {
-        $0.rel.hasPrefix("Library/Caches/") ? String($0.rel.dropFirst("Library/Caches/".count)) : nil
+    static let claimedCacheNames: Set<String> = Set(caches.flatMap(\.rels).compactMap {
+        $0.hasPrefix("Library/Caches/") ? $0.dropFirst("Library/Caches/".count).split(separator: "/").first.map(String.init) : nil
     })
 
     public func isPresent(_ env: Environment) async -> Bool {
-        Self.caches.contains { exists(env.path($0.rel)) }
+        Self.caches.contains { $0.rels.contains { exists(env.path($0)) } }
     }
 
     public func scan(_ env: Environment, pins: Pins) async -> [Item] {
-        await measured(Self.caches.filter { exists(env.path($0.rel)) }.map { c in
-            Item(id: "cache.\(c.key)", title: "\(c.title) cache", detail: "~/\(c.rel)", paths: [env.path(c.rel)], bytes: 0, risk: .regenerable)
+        await measured(Self.caches.compactMap { c in
+            let found = c.rels.filter { exists(env.path($0)) }
+            guard !found.isEmpty else { return nil }
+            return Item(id: "cache.\(c.key)", title: "\(c.title) cache", detail: found.map { "~/\($0)" }.joined(separator: ", "),
+                        paths: found.map { env.path($0) }, bytes: 0, risk: .regenerable)
         })
     }
 

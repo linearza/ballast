@@ -1,6 +1,7 @@
 import Foundation
 
-/// Local AI models: Ollama, Hugging Face, Whisper and LM Studio.
+/// Local AI models: Ollama, Hugging Face, Whisper, LM Studio, GPT4All, Jan, llama.cpp,
+/// DiffusionBee, Draw Things and PyTorch Hub.
 public struct AIModelsProvider: Provider {
     public init() {}
     public let id = "aiModels"
@@ -9,6 +10,9 @@ public struct AIModelsProvider: Provider {
     public let symbol = "brain"
 
     static let uninstallOllama = "ai.ollama.uninstall"
+    /// Folders in ~/Library/Caches that hold models, so AppCaches leaves them out.
+    static let claimedCacheNames: Set<String> = ["llama.cpp"]
+    static let drawThings = "Library/Containers/com.liuliu.draw-things/Data/Documents/Models"
 
     func ollamaRoot(_ env: Environment) -> URL { env.path(".ollama/models") }
 
@@ -55,11 +59,29 @@ public struct AIModelsProvider: Provider {
         for name in subfolders(lm).sorted() where !name.hasPrefix(".") {
             out.append(("ai.lmstudio.\(name)", "\(name) (LM Studio)", lm.appending(path: name)))
         }
+        func files(_ dir: URL) -> [String] {
+            ((try? FileManager.default.contentsOfDirectory(atPath: dir.path)) ?? []).filter { $0.hasSuffix(".gguf") || $0.hasSuffix(".bin") }.sorted()
+        }
+        let gpt4all = env.path("Library/Application Support/nomic.ai/GPT4All")
+        for name in files(gpt4all) {
+            out.append(("ai.gpt4all.\(name)", "\(name) (GPT4All)", gpt4all.appending(path: name)))
+        }
+        for dir in ["jan/models", "Library/Application Support/Jan/data/models", "Library/Application Support/Jan/data/llamacpp/models"] {
+            for name in subfolders(env.path(dir)) where !out.contains(where: { $0.0 == "ai.jan.\(name)" }) {
+                out.append(("ai.jan.\(name)", "\(name) (Jan)", env.path("\(dir)/\(name)")))
+            }
+        }
+        let llama = env.path("Library/Caches/llama.cpp")
+        for name in files(llama) {
+            out.append(("ai.llamacpp.\(name)", "\(name) (llama.cpp)", llama.appending(path: name)))
+        }
+        if exists(env.path(".diffusionbee")) { out.append(("ai.diffusionbee", "DiffusionBee models", env.path(".diffusionbee"))) }
+        if exists(env.path(".cache/torch/hub")) { out.append(("ai.torch", "PyTorch Hub models", env.path(".cache/torch/hub"))) }
         return out
     }
 
     public func isPresent(_ env: Environment) async -> Bool {
-        exists(env.path(".ollama")) || !modelDirs(env).isEmpty
+        exists(env.path(".ollama")) || !modelDirs(env).isEmpty || exists(env.path(Self.drawThings))
     }
 
     public func scan(_ env: Environment, pins: Pins) async -> [Item] {
@@ -67,7 +89,12 @@ public struct AIModelsProvider: Provider {
             Item(id: "ai.ollama.\(m.name)", title: m.name, detail: "Ollama", paths: [m.manifest] + m.blobs.filter(exists), bytes: 0, risk: .review)
         }
         items += modelDirs(env).map { Item(id: $0.id, title: $0.title, detail: $0.url.path, paths: [$0.url], bytes: 0, risk: .review) }
-        return await measured(items)
+        var all = await measured(items)
+        if exists(env.path(Self.drawThings)) {
+            all.append(lockedItem(id: "ai.drawthings", title: "Draw Things models", detail: "Kept in Draw Things' private folder",
+                                  paths: [env.path(Self.drawThings)], risk: .review))
+        }
+        return all
     }
 
     public func extraActions(_ items: [Item]) -> [ProviderAction] {
