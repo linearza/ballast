@@ -31,8 +31,13 @@ import SwiftUI
 
             model.selection = "ruby"
             model.checked = ["ruby": ["ruby.rvm.2.7.8", "ruby.rvm.3.0.6", "ruby.rvm.downloads", "ruby.rvm.3.2.2"]]
-            let sheet = await render(ConfirmSheet(model: model, state: confirmState(model)), size: NSSize(width: 560, height: 460), title: nil, dark: dark)
+            let sheet = await render(ConfirmSheet(model: model, state: confirmState(model)), size: NSSize(width: 560, height: 560), title: nil, dark: dark)
             save(frame(main, sheet: sheet), dir.appending(path: "confirm\(suffix).png"))
+
+            model.selection = SafeView.id
+            model.checked = [:]
+            let safe = await render(MainWindowRoot(model: model), size: NSSize(width: 980, height: 600), title: "Ballast", dark: dark)
+            save(frame(safe), dir.appending(path: "safe\(suffix).png"))
 
             let popover = await render(Popover(model: model), size: NSSize(width: 320, height: 420), title: nil, dark: dark, fit: true)
             save(frame(popover), dir.appending(path: "menu\(suffix).png"))
@@ -133,7 +138,8 @@ import SwiftUI
             Step("Remove Ruby 2.7.8", .shell("\(source) && rvm remove ruby-2.7.8 --gems"), bytes: byID["ruby.rvm.2.7.8"]!.bytes, itemID: "ruby.rvm.2.7.8"),
             Step("Remove Ruby 3.0.6", .shell("\(source) && rvm remove ruby-3.0.6 --gems"), bytes: byID["ruby.rvm.3.0.6"]!.bytes, itemID: "ruby.rvm.3.0.6"),
             Step("Remove RVM downloads and sources", .shell("\(source) && rvm cleanup archives && rvm cleanup sources"), bytes: byID["ruby.rvm.downloads"]!.bytes, itemID: "ruby.rvm.downloads"),
-        ], refusals: [Refusal(itemID: "ruby.rvm.3.2.2", reason: "Pinned by billing-api")])
+            Step("Remove Ruby 3.2.2", .shell("\(source) && rvm remove ruby-3.2.2 --gems"), bytes: byID["ruby.rvm.3.2.2"]!.bytes, itemID: "ruby.rvm.3.2.2"),
+        ], dangers: ["Ruby 3.2.2 is pinned by billing-api."])
         return RunState(provider: model.provider("ruby")!, items: items, plan: plan)
     }
 

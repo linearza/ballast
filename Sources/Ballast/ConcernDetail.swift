@@ -150,6 +150,7 @@ extension Badge {
         case .lastUsed(let d): "last used \(d.formatted(.dateTime.month(.abbreviated).year()))"
         case .locked: "locked"
         case .selectedByXcodeSelect: "selected by xcode-select"
+        case .inICloud: "in iCloud"
         }
     }
 }

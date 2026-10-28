@@ -120,7 +120,7 @@ import Testing
         git(dir, "commit", "-q", "-m", "first", date: "2026-01-01T10:00:00Z")
         f.file("Projects/svc/Cargo.toml", contents: "[package]\n")
         f.file("Projects/svc/target/debug/app", bytes: 100)
-        let items = await ProjectLeftoversProvider().scan(f.env(runner: FakeRunner([:], passthrough: ["git"])), pins: Pins())
+        let items = await ProjectLeftoversProvider(minBytes: 0).scan(f.env(runner: FakeRunner([:], passthrough: ["git"])), pins: Pins())
         #expect(!items.contains { $0.id == "project.build.\(f.url("Projects/app/Pods").path)" })
         #expect(items.contains { $0.id == "project.build.\(f.url("Projects/svc/target").path)" })
     }

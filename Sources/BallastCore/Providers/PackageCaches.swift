@@ -48,12 +48,18 @@ public struct PackageCachesProvider: Provider {
     }
 
     public func scan(_ env: Environment, pins: Pins) async -> [Item] {
-        await measured(Self.caches.compactMap { c in
+        var items = await measured(Self.caches.compactMap { c in
             let found = c.rels.filter { exists(env.path($0)) }
             guard !found.isEmpty else { return nil }
             return Item(id: "cache.\(c.key)", title: "\(c.title) cache", detail: found.map { "~/\($0)" }.joined(separator: ", "),
                         paths: found.map { env.path($0) }, bytes: 0, risk: .regenerable)
         })
+        // `pnpm store prune` keeps every package a project still links to, so only the rest counts.
+        if let i = items.firstIndex(where: { $0.id == "cache.pnpm" }), await env.runner.which("pnpm") != nil {
+            items[i].bytes = await measureUnlinked(items[i].paths)
+            items[i].detail = (items[i].detail ?? "") + " · packages no project uses"
+        }
+        return items
     }
 
     public func plan(_ ids: [String], items: [Item], env: Environment) async -> Plan {

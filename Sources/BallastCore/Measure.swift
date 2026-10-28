@@ -110,3 +110,22 @@ private func walk(_ path: String) -> Tally {
     }
     return tally
 }
+
+/// Allocated size of the files under `urls` that nothing else hard-links to. pnpm links its store into
+/// every project's node_modules, so these are the packages `pnpm store prune` would actually free.
+public func measureUnlinked(_ urls: [URL]) async -> Int64 {
+    await Task(priority: .utility) { unlinkedNow(urls) }.value
+}
+
+private func unlinkedNow(_ urls: [URL]) -> Int64 {
+    var total: Int64 = 0
+    for url in urls {
+        guard let e = FileManager.default.enumerator(at: url, includingPropertiesForKeys: nil) else { continue }
+        for case let file as URL in e {
+            var st = stat()
+            guard lstat(file.path, &st) == 0, (st.st_mode & S_IFMT) == S_IFREG, st.st_nlink == 1 else { continue }
+            total += Int64(st.st_blocks) * 512
+        }
+    }
+    return total
+}

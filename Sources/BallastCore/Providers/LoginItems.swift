@@ -25,7 +25,8 @@ public struct LoginItemsProvider: Provider {
                 ? "Homebrew service for \(label.dropFirst("homebrew.mxcl.".count)), which is no longer installed"
                 : "Starts \(program), which no longer exists"
             let size = await measure([url])
-            items.append(Item(id: "login.\(label)", title: label, detail: detail, paths: [url], bytes: size.bytes, risk: .regenerable))
+            // Two files can carry the same label; the file name is unique.
+            items.append(Item(id: "login.\((name as NSString).deletingPathExtension)", title: label, detail: detail, paths: [url], bytes: size.bytes, risk: .regenerable))
         }
         return items
     }

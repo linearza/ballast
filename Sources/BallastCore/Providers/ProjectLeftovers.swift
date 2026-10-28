@@ -2,7 +2,10 @@ import Foundation
 
 /// Leftovers inside your projects: `node_modules` and other build output, and git worktrees.
 public struct ProjectLeftoversProvider: Provider {
-    public init(idleDays: Int = 60) { self.idleDays = idleDays }
+    public init(idleDays: Int = 60, minBytes: Int64 = 1_000_000) {
+        self.idleDays = idleDays
+        self.minBytes = minBytes
+    }
     public let id = "projects"
     public let title = "Project leftovers"
     public let section = Section.projects
@@ -10,20 +13,25 @@ public struct ProjectLeftoversProvider: Provider {
 
     /// node_modules in projects quiet for this long count as safe to remove.
     let idleDays: Int
+    /// Build output smaller than this isn't worth a line in the list.
+    let minBytes: Int64
 
     public func isPresent(_ env: Environment) async -> Bool {
         env.projectRoots.contains(where: exists)
     }
 
     public func scan(_ env: Environment, pins: Pins) async -> [Item] {
-        var items: [Item] = []
+        var builds: [Item] = []
         for found in buildOutput(env.projectRoots) where await !isTracked(found.url, env: env) {
-            items.append(await buildItem(found.url, kind: found.kind, env: env))
+            builds.append(await buildItem(found.url, kind: found.kind, env: env))
         }
+        var items = await measured(builds).filter { $0.bytes >= minBytes || $0.sizeIsPartial }
+        var worktrees: [Item] = []
         for repo in repos(env.projectRoots) {
-            items += await worktreeItems(repo, env: env)
+            worktrees += await worktreeItems(repo, env: env)
         }
-        return await measured(items)
+        items += await measured(worktrees)
+        return items
     }
 
     // MARK: Build output

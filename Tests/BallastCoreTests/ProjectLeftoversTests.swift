@@ -36,7 +36,7 @@ func git(_ dir: URL, _ args: String..., date: String = "2026-10-20T10:00:00Z") -
         let f = Fixture()
         repo(f, "Projects/old", date: "2026-01-01T10:00:00Z")
         f.file("Projects/old/node_modules/a/index.js", bytes: 10_000)
-        let items = await ProjectLeftoversProvider().scan(f.env(runner: runner(), now: now), pins: Pins())
+        let items = await ProjectLeftoversProvider(minBytes: 0).scan(f.env(runner: runner(), now: now), pins: Pins())
         let nm = try #require(items.first { $0.id.hasPrefix("project.nm.") })
         #expect(nm.risk == .regenerable)
         #expect(!nm.inUse)
@@ -48,7 +48,7 @@ func git(_ dir: URL, _ args: String..., date: String = "2026-10-20T10:00:00Z") -
         let f = Fixture()
         repo(f, "Projects/new", date: "2026-10-20T10:00:00Z")
         f.file("Projects/new/node_modules/a/index.js", bytes: 10_000)
-        let items = await ProjectLeftoversProvider().scan(f.env(runner: runner(), now: now), pins: Pins())
+        let items = await ProjectLeftoversProvider(minBytes: 0).scan(f.env(runner: runner(), now: now), pins: Pins())
         let nm = try #require(items.first { $0.id.hasPrefix("project.nm.") })
         #expect(nm.risk == .review)
         #expect(nm.badges.contains { if case .lastUsed = $0 { true } else { false } })
@@ -58,7 +58,7 @@ func git(_ dir: URL, _ args: String..., date: String = "2026-10-20T10:00:00Z") -
         let f = Fixture()
         f.file("Projects/loose/package.json", contents: "{}", modified: ISO8601DateFormatter().date(from: "2026-02-01T00:00:00Z"))
         f.file("Projects/loose/node_modules/a/index.js", bytes: 100)
-        let items = await ProjectLeftoversProvider().scan(f.env(runner: runner(), now: now), pins: Pins())
+        let items = await ProjectLeftoversProvider(minBytes: 0).scan(f.env(runner: runner(), now: now), pins: Pins())
         #expect(items.first { $0.id.hasPrefix("project.nm.") }?.risk == .regenerable)
     }
 
@@ -66,7 +66,7 @@ func git(_ dir: URL, _ args: String..., date: String = "2026-10-20T10:00:00Z") -
         let f = Fixture()
         f.file("Projects/app/package.json", contents: "{}")
         f.file("Projects/app/node_modules/dep/node_modules/inner/x.js", bytes: 100)
-        let items = await ProjectLeftoversProvider().scan(f.env(runner: runner(), now: now), pins: Pins())
+        let items = await ProjectLeftoversProvider(minBytes: 0).scan(f.env(runner: runner(), now: now), pins: Pins())
         #expect(items.filter { $0.id.hasPrefix("project.nm.") }.count == 1)
     }
 
@@ -77,7 +77,7 @@ func git(_ dir: URL, _ args: String..., date: String = "2026-10-20T10:00:00Z") -
         git(r, "worktree", "add", "-q", "-b", "feature", wt.path)
         f.file("Projects/app-feature/scratch.txt", contents: "wip")
         let env = f.env(runner: runner(), now: now)
-        let p = ProjectLeftoversProvider()
+        let p = ProjectLeftoversProvider(minBytes: 0)
         let items = await p.scan(env, pins: Pins())
         let w = try #require(items.first { $0.id.hasPrefix("project.wt.") })
         #expect(w.badges.contains(.uncommitted(1)))
@@ -96,7 +96,7 @@ func git(_ dir: URL, _ args: String..., date: String = "2026-10-20T10:00:00Z") -
         fake.responses["cd \(shellQuote(r.path)) && gh pr list --state all --limit 1000 --json headRefName,state"] =
             FakeRunner.out(#"[{"headRefName":"done","state":"MERGED"},{"headRefName":"other","state":"OPEN"}]"#)
         let env = f.env(runner: fake, now: now)
-        let p = ProjectLeftoversProvider()
+        let p = ProjectLeftoversProvider(minBytes: 0)
         let items = await p.scan(env, pins: Pins())
         let w = try #require(items.first { $0.id.hasPrefix("project.wt.") })
         #expect(w.badges.contains(.mergedPR))
@@ -118,7 +118,7 @@ func git(_ dir: URL, _ args: String..., date: String = "2026-10-20T10:00:00Z") -
         git(r, "config", "branch.gone.remote", "origin")
         git(r, "config", "branch.gone.merge", "refs/heads/gone")
         let fake = runner()
-        let items = await ProjectLeftoversProvider().scan(f.env(runner: fake, now: now), pins: Pins())
+        let items = await ProjectLeftoversProvider(minBytes: 0).scan(f.env(runner: fake, now: now), pins: Pins())
         let w = try #require(items.first { $0.id.hasPrefix("project.wt.") })
         #expect(w.badges.contains(.mergedPR))
         #expect(!fake.calls.contains { $0.contains("gh ") })

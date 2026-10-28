@@ -89,7 +89,7 @@ public struct PythonProvider: Provider {
             Self.condaBases.map { env.path("\($0)/bin/conda").path }.first { FileManager.default.isExecutableFile(atPath: $0) }
         }
         let pipx = await env.runner.which("pipx") != nil
-        return planEach(ids, items: items, noun: "Python") { item in
+        var plan = planEach(ids, items: items, noun: "Python") { item in
             let parts = item.id.split(separator: ".", maxSplits: 2).map(String.init)
             let name = parts[2]
             let kind: StepKind = switch parts[1] {
@@ -102,6 +102,32 @@ public struct PythonProvider: Provider {
             default: .trash(item.paths)
             }
             return [Step("Remove \(item.title)", kind, bytes: item.bytes, itemID: item.id)]
+        }
+        let venvs = items.filter { !ids.contains($0.id) && !Self.isVersion($0) }
+        for item in items where ids.contains(item.id) && Self.isVersion(item) {
+            guard let root = item.paths.first?.resolvingSymlinksInPath().path else { continue }
+            let users = venvs.filter { venv in venv.paths.contains { Self.homes($0).contains { $0 == root || $0.hasPrefix(root + "/") } } }
+            guard !users.isEmpty else { continue }
+            let names = users.map { "\($0.title) (\($0.detail?.components(separatedBy: " · ").first ?? "virtualenv"))" }
+            plan.dangers.append("\(item.title) runs \(names.joined(separator: ", ")). \(users.count == 1 ? "It stops" : "They stop") working until you reinstall \(users.count == 1 ? "it" : "them") with another Python.")
+        }
+        return plan
+    }
+
+    static func isVersion(_ item: Item) -> Bool {
+        ["python.pyenv.", "python.mise.", "python.uv."].contains { item.id.hasPrefix($0) }
+    }
+
+    /// The Python each virtualenv in `folder` was made from, read from `pyvenv.cfg` (hatch keeps one per environment, a level down).
+    static func homes(_ folder: URL) -> [String] {
+        let cfgs = [folder.appending(path: "pyvenv.cfg")] + subfolders(folder).map { folder.appending(path: "\($0)/pyvenv.cfg") }
+        return cfgs.compactMap { cfg in
+            guard let text = try? String(contentsOf: cfg, encoding: .utf8) else { return nil }
+            for line in text.split(whereSeparator: \.isNewline) {
+                let parts = line.split(separator: "=", maxSplits: 1).map { $0.trimmingCharacters(in: .whitespaces) }
+                if parts.count == 2, parts[0] == "home" { return URL(filePath: parts[1]).resolvingSymlinksInPath().path }
+            }
+            return nil
         }
     }
 }

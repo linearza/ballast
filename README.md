@@ -33,6 +33,13 @@ The menu bar icon shows free space at a glance. Click it for a summary, or open 
 </picture>
 </p>
 
+**Safe to reclaim** gathers everything Ballast is sure you can remove: caches, old downloads and build output that come back when needed, and nothing you use. Open it from the menu or the top of the sidebar to see each item, then review and remove a group at a time.
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/safe-dark.png">
+  <img src="docs/screenshots/safe.png" alt="Safe to reclaim: 38.75 GB of simulator runtimes, package caches and old Ruby versions, grouped by tool, each group with a Review and remove button">
+</picture>
+
 Project leftovers shows which `node_modules` and other build folders belong to projects you haven't touched in a while, and which git worktrees are done with: their pull request is merged and nothing is left uncommitted or unpushed.
 
 <picture>
@@ -46,7 +53,7 @@ Ballast is built so that cleaning up is hard to regret.
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/confirm-dark.png">
-  <img src="docs/screenshots/confirm.png" alt="The confirmation sheet: every command Ballast will run, with a pinned Ruby version refused">
+  <img src="docs/screenshots/confirm.png" alt="The confirmation sheet: a Read this first box saying Ruby 3.2.2 is pinned by billing-api, an I understand checkbox, and each command marked Deleted for good">
 </picture>
 
 - **Nothing happens without a preview.** You tick items, then see every step Ballast will take (each path it will move and each command it will run) before you confirm.
@@ -54,7 +61,10 @@ Ballast is built so that cleaning up is hard to regret.
 - **Each step says whether it can be undone.** Files go to the Trash, so you can put them back. Commands a tool runs for itself (`brew uninstall`, `docker image rm` and the like) delete for good, and the step says so.
 - **The more it matters, the more Ballast asks.** Routine clean-ups confirm with Return. Anything that needs a look (a *Review* item or a warning) needs a click on Remove. Anything that can lose your work (your data, a version a project pins or you use by default, a Docker volume, an app's saved data, a database's files) lists what's at stake under **Read this first**, and Remove stays off until you tick **I understand**.
 - **Some folders are never removed,** whatever a scan finds: your home folder and its Documents, Desktop, Downloads, Library and the like, your SSH and GPG keys and Keychains, and macOS's own folders.
-- **Build folders your project commits to git** (a checked-in `Pods` or `dist`) are source, not leftovers, and aren't offered.
+- **Build folders your project commits to git** (a checked-in `Pods` or `dist`) are source, not leftovers, and aren't offered. Build folders under 1 MB aren't listed either: they're not worth the risk of a second look.
+- **Files in iCloud Drive are flagged.** When your Desktop or Documents sync with iCloud, a large file there is marked *in iCloud*, and removing it needs **I understand**: the Trash on one Mac removes it from every device.
+- **Breakage elsewhere is named.** Removing a Python version lists the pipx apps and Poetry, Pipenv or Hatch environments built on it, which stop working until you reinstall them. Uninstalling RVM names the Rubies you use by default or projects pin.
+- **Background helpers are stopped first.** When you remove an app, any helper it left running in `~/Library/LaunchAgents` is stopped before its file goes to the Trash, so nothing keeps running from a deleted app.
 - **Tools clean up their own data.** Where a tool has its own way to remove something (`brew uninstall`, `docker image rm`, `ollama rm`, `git worktree remove`, `xcrun simctl delete`), Ballast uses it, so the tool's own records stay correct.
 - **Some things are refused outright:** a worktree with uncommitted changes, a database or virtual machine that's running, an editor's own settings database, an app that ships with macOS. The reason is shown next to the item.
 - **Versions your projects pin are marked.** Removing a language version a project pins names the project and asks you to confirm you understand, and the version is never ticked by **Select safe**.
@@ -138,6 +148,7 @@ make test      # run the tests
 make app       # build dist/Ballast.app
 make icon      # re-render Resources/AppIcon.icns
 make release   # universal build and dist/Ballast-<version>.zip
+make notarize DEVELOPER_ID="Developer ID Application: …"  # sign and notarise the release (needs an Apple Developer account)
 make screenshots  # re-render docs/screenshots from sample data
 ```
 

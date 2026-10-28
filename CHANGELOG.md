@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.3.1 — 2026-10-28
+
+- **iCloud Drive:** large files in a Desktop or Documents folder synced with iCloud are marked *in iCloud*, and removing them needs **I understand**, because it removes them from every device.
+- **Python:** removing a Python version names the pipx apps and Poetry, Pipenv or Hatch environments built on it.
+- **RVM:** *Uninstall RVM completely* names the Rubies you use by default or projects pin.
+- **Apps:** background helpers an app left in `~/Library/LaunchAgents` are stopped before they go to the Trash.
+- **pnpm:** the pnpm store now shows only what `pnpm store prune` frees, the packages no project links to, instead of the whole store.
+- **Project leftovers:** build folders under 1 MB are no longer listed.
+- **Login items:** two leftover login items with the same name no longer clash.
+- `make notarize` signs and notarises a release, for when there's a Developer ID to sign with.
+- New screenshots, including Safe to reclaim.
+
 ## 0.3.0 — 2026-10-28
 
 Ballast now guards harder against removing something you'll regret, especially if you're not sure what an item is.
