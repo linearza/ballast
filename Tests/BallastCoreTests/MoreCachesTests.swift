@@ -62,3 +62,35 @@ import Testing
         #expect(m[id("Projects/web/dist")]?.risk == .review)
     }
 }
+
+@Suite struct VirtualMachinesTests {
+    @Test func containerRuntimesAndVMs() async throws {
+        let f = Fixture()
+        f.file(".colima/default/colima.yaml", bytes: 10)
+        f.file(".colima/_lima/colima/diffdisk", bytes: 1000)
+        f.file(".lima/dev/diffdisk", bytes: 1000)
+        f.file(".lima/busy/diffdisk", bytes: 1000)
+        f.file(".lima/busy/ha.pid", contents: "\(getpid())\n")
+        f.file(".minikube/machines/minikube/disk.rawdisk", bytes: 1000)
+        f.file(".minikube/profiles/minikube/config.json", contents: "{}")
+        f.file(".local/share/containers/podman/machine/applehv/podman-machine-default-arm64.raw", bytes: 1000)
+        f.file("Parallels/Windows 11.pvm/disk.hdd", bytes: 1000)
+        f.file("Virtual Machines.localized/Ubuntu.vmwarevm/disk.vmdk", bytes: 1000)
+        let env = f.env(runner: FakeRunner(tools: ["colima", "limactl", "minikube", "podman"]))
+        let p = VirtualMachinesProvider()
+        let items = await p.scan(env, pins: Pins())
+        let m = Dictionary(uniqueKeysWithValues: items.map { ($0.id, $0) })
+        #expect(Set(m.keys) == ["vm.colima.default", "vm.lima.dev", "vm.lima.busy", "vm.minikube.minikube", "vm.podman",
+                                "vm.parallels.Windows 11.pvm", "vm.vmware.Ubuntu.vmwarevm"])
+        #expect(m["vm.colima.default"]?.paths.contains(f.url(".colima/_lima/colima")) == true)
+        #expect(m["vm.lima.busy"]?.badges.contains(.running) == true)
+        #expect(m["vm.parallels.Windows 11.pvm"]?.risk == .yourData)
+        func kind(_ id: String) async -> StepKind? { await p.plan([id], items: items, env: env).steps.first?.kind }
+        #expect(await kind("vm.colima.default") == .command(argv: ["colima", "delete", "--force", "--profile", "default"]))
+        #expect(await kind("vm.lima.dev") == .command(argv: ["limactl", "delete", "--force", "dev"]))
+        #expect(await kind("vm.minikube.minikube") == .command(argv: ["minikube", "delete", "--profile", "minikube"]))
+        let busy = await p.plan(["vm.lima.busy"], items: items, env: env)
+        #expect(busy.steps.isEmpty)
+        #expect(busy.refusals.first?.reason.contains("limactl stop busy") == true)
+    }
+}

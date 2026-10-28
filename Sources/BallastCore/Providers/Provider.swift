@@ -42,7 +42,7 @@ extension Provider {
 
 public enum Providers {
     public static let all: [any Provider] = [
-        RubyProvider(), NodeProvider(), PythonProvider(), LanguagesProvider(), HomebrewProvider(), DockerProvider(), XcodeProvider(), ProjectLeftoversProvider(), DatabasesProvider(), LoginItemsProvider(),
+        RubyProvider(), NodeProvider(), PythonProvider(), LanguagesProvider(), HomebrewProvider(), DockerProvider(), VirtualMachinesProvider(), XcodeProvider(), ProjectLeftoversProvider(), DatabasesProvider(), LoginItemsProvider(),
         PackageCachesProvider(), AppCachesProvider(), AIModelsProvider(), AppsProvider(), LargeFilesProvider(), OtherDevDataProvider(),
     ]
 }
@@ -116,6 +116,17 @@ func subfolders(_ url: URL) -> [String] {
               let attrs = try? FileManager.default.attributesOfItem(atPath: url.appending(path: name).path) else { return false }
         return attrs[.type] as? FileAttributeType == .typeDirectory
     }.sorted { $0.localizedStandardCompare($1) == .orderedAscending }
+}
+
+/// A server or VM started outside a service manager leaves a pid file in its folder,
+/// like `postmaster.pid`, `<host>.pid` or Lima's `ha.pid`, whose first line is its pid.
+func hasLivePidFile(_ dir: URL) -> Bool {
+    let files = (try? FileManager.default.contentsOfDirectory(atPath: dir.path)) ?? []
+    return files.filter { $0.hasSuffix(".pid") }.contains { file in
+        guard let line = firstLine(dir.appending(path: file)), let pid = Int32(line.trimmingCharacters(in: .whitespaces)),
+              pid > 0 else { return false }
+        return kill(pid, 0) == 0 || errno == EPERM
+    }
 }
 
 func exists(_ url: URL) -> Bool { FileManager.default.fileExists(atPath: url.path) }

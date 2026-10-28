@@ -133,17 +133,6 @@ public struct DatabasesProvider: Provider {
         return await measured(items)
     }
 
-    /// A server started outside `brew services` (pg_ctl, mysqld) leaves a pid file in its data folder,
-    /// like `postmaster.pid` or `<host>.pid`, whose first line is the server's pid.
-    func hasLivePidFile(_ dir: URL) -> Bool {
-        let files = (try? FileManager.default.contentsOfDirectory(atPath: dir.path)) ?? []
-        return files.filter { $0.hasSuffix(".pid") }.contains { file in
-            guard let line = firstLine(dir.appending(path: file)), let pid = Int32(line.trimmingCharacters(in: .whitespaces)),
-                  pid > 0 else { return false }
-            return kill(pid, 0) == 0 || errno == EPERM
-        }
-    }
-
     func matchingFormula(_ dir: String, in formulae: Set<String>) -> String? {
         if formulae.contains(dir) { return dir }
         if dir == "postgres" { return formulae.first { $0.hasPrefix("postgresql") } }
