@@ -51,7 +51,7 @@ import Testing
         f.file("Projects/ex/_build/x", bytes: 100)
         f.file("Projects/ex/deps/x", bytes: 100)
         f.file("Projects/notes/target/x", bytes: 100)
-        let items = await ProjectLeftoversProvider().scan(f.env(), pins: Pins())
+        let items = await ProjectLeftoversProvider(minBytes: 0).scan(f.env(), pins: Pins())
         let m = byID(items)
         let id = { (rel: String) in "project.build.\(f.url(rel).path)" }
         #expect(Set(m.keys) == Set(["Projects/rs/target", "Projects/py/.venv", "Projects/web/.next", "Projects/web/dist",

@@ -1,7 +1,7 @@
 import Foundation
 
 public enum BallastCore {
-    public static let version = "0.3.0"
+    public static let version = "0.3.1"
 }
 
 /// How safe an item is to remove.
@@ -30,11 +30,13 @@ public enum Badge: Hashable, Codable, Sendable {
     case lastUsed(Date)
     case locked
     case selectedByXcodeSelect
+    /// Synced with iCloud Drive, so removing it removes it on every device.
+    case inICloud
 
     public var meansInUse: Bool {
         switch self {
         case .isDefault, .pinned, .running, .uncommitted, .unpushed, .openPR, .selectedByXcodeSelect: true
-        case .mergedPR, .orphaned, .lastUsed, .locked: false
+        case .mergedPR, .orphaned, .lastUsed, .locked, .inICloud: false
         }
     }
 }

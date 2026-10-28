@@ -9,7 +9,7 @@ REPO     := $(shell git remote get-url origin 2>/dev/null | sed -nE 's|.*github\
 # macro plugin from clean builds; passing its folder explicitly avoids that.
 TESTING_PLUGINS := $(shell dirname "$$(xcrun -f swift 2>/dev/null)")/../lib/swift/host/plugins/testing
 
-.PHONY: build test app install uninstall release icon screenshots check clean
+.PHONY: build test app install uninstall release notarize icon screenshots check clean
 
 check:
 	@swift --version 2>/dev/null | grep -Eq 'Swift version ([6-9]|[1-9][0-9])\.' || { \
@@ -45,6 +45,20 @@ release: check
 	BALLAST_REPO="$(REPO)" scripts/bundle.sh "$$(swift build -c release --arch arm64 --arch x86_64 --show-bin-path)/$(APP)" "$(BUNDLE)" "$(VERSION)"
 	cd $(DIST) && rm -f $(APP)-$(VERSION).zip && ditto -c -k --keepParent $(APP).app $(APP)-$(VERSION).zip
 	@echo "$(DIST)/$(APP)-$(VERSION).zip"
+
+# Signs the release with a Developer ID and has Apple notarise it, so macOS opens it without a warning.
+# Needs a paid Apple Developer account. Once: store credentials with
+#   xcrun notarytool store-credentials ballast --apple-id you@example.com --team-id TEAMID
+# then: make notarize DEVELOPER_ID="Developer ID Application: Your Name (TEAMID)"
+NOTARY_PROFILE ?= ballast
+notarize: release
+	@test -n "$(DEVELOPER_ID)" || { echo 'Set DEVELOPER_ID="Developer ID Application: Your Name (TEAMID)"'; exit 1; }
+	codesign --force --deep --options runtime --timestamp --entitlements Resources/Ballast.entitlements -s "$(DEVELOPER_ID)" "$(BUNDLE)"
+	cd $(DIST) && rm -f $(APP)-$(VERSION).zip && ditto -c -k --keepParent $(APP).app $(APP)-$(VERSION).zip
+	xcrun notarytool submit "$(DIST)/$(APP)-$(VERSION).zip" --keychain-profile "$(NOTARY_PROFILE)" --wait
+	xcrun stapler staple "$(BUNDLE)"
+	cd $(DIST) && rm -f $(APP)-$(VERSION).zip && ditto -c -k --keepParent $(APP).app $(APP)-$(VERSION).zip
+	@echo "$(DIST)/$(APP)-$(VERSION).zip (notarised)"
 
 # Renders docs/screenshots from made-up sample data; nothing on this Mac is scanned.
 screenshots: app

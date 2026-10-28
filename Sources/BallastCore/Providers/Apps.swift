@@ -83,7 +83,14 @@ public struct AppsProvider: Provider {
             if let w = inUseWarning(item, noun: "app") { plan.dangers.append(w) }
             plan.steps.append(Step("Move \(item.title) to the Trash", .trash([app]), bytes: item.bytes, itemID: id))
             guard let bid else { continue }
-            let found = leftovers(bid, otherIDs: items.compactMap(\.detail), env: env)
+            var found = leftovers(bid, otherIDs: items.compactMap(\.detail), env: env)
+            // A background helper keeps running until it's stopped, even with its file gone.
+            let agentsDir = env.path("Library/LaunchAgents").path
+            for agent in found where agent.deletingLastPathComponent().path == agentsDir && agent.pathExtension == "plist" {
+                let label = NSDictionary(contentsOf: agent)?["Label"] as? String ?? agent.deletingPathExtension().lastPathComponent
+                plan.steps.append(Step("Stop \(item.title)'s background helper \(label)", .unloadLoginItem(label: label, plist: agent), itemID: id))
+            }
+            found.removeAll { $0.deletingLastPathComponent().path == agentsDir && $0.pathExtension == "plist" }
             if !found.isEmpty {
                 // Containers aren't measured: reading them can bring up a permission prompt.
                 let readable = found.filter { !$0.path.contains("/Containers/") }

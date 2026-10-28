@@ -151,18 +151,18 @@ import UserNotifications
     func startSchedule() {
         timer?.invalidate()
         timer = nil
-        let check = { [weak self] in
-            Task { @MainActor in
-                guard let self else { return }
-                // Menu bar apps stay open for weeks; `check` itself asks GitHub at most once a day.
-                await self.updates.check()
-                guard self.prefs.rescanHours > 0, !self.scanning else { return }
-                let age = Date().timeIntervalSince(self.summary?.scannedAt ?? .distantPast)
-                if age >= Double(self.prefs.rescanHours) * 3600 { await self.scanNow(background: true) }
-            }
+        Task { await scheduledCheck() }
+        timer = Timer.scheduledTimer(withTimeInterval: 3600, repeats: true) { [weak self] _ in
+            Task { @MainActor in await self?.scheduledCheck() }
         }
-        check()
-        timer = Timer.scheduledTimer(withTimeInterval: 3600, repeats: true) { _ in check() }
+    }
+
+    func scheduledCheck() async {
+        // Menu bar apps stay open for weeks; `check` itself asks GitHub at most once a day.
+        await updates.check()
+        guard prefs.rescanHours > 0, !scanning else { return }
+        let age = Date().timeIntervalSince(summary?.scannedAt ?? .distantPast)
+        if age >= Double(prefs.rescanHours) * 3600 { await scanNow(background: true) }
     }
 
     /// Drops the item lists when the main window closes; the summary stays.

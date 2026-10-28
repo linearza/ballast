@@ -91,7 +91,8 @@ public struct RubyProvider: Provider {
             let bytes = await measure([env.path(".rvm")]).bytes
             return Plan(steps: [Step("Remove RVM and everything it installed", .shell("\(source) && rvm implode --force"), bytes: bytes)],
                         warnings: ["Afterwards, remove the RVM lines from ~/.zshrc, ~/.zprofile or ~/.bash_profile."],
-                        dangers: ["This removes every Ruby version and gem installed with RVM."])
+                        dangers: ["This removes every Ruby version and gem installed with RVM."]
+                            + items.filter { $0.id.hasPrefix("ruby.rvm.") }.compactMap { inUseWarning($0, noun: "Ruby") })
         }
         return planEach(ids, items: items, noun: "Ruby") { item in
             let parts = item.id.split(separator: ".", maxSplits: 2).map(String.init)
