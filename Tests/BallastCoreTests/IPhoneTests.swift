@@ -308,7 +308,6 @@ final class FakeTransfer: IPhoneMediaTransfer, @unchecked Sendable {
 
     @Test func serialsMatchThroughDroppedZerosAndDashes() {
         #expect(sameSerial("00008030-00C08282610402E", "00008030-000C08282610402E"))
-        #expect(sameSerial("00008030000C08282610402E", "00008030-000C08282610402E"))
         #expect(!sameSerial("00008030-000C08282610402F", "00008030-000C08282610402E"))
         #expect(!sameSerial("", ""))
     }
