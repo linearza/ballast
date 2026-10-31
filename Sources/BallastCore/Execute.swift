@@ -30,12 +30,15 @@ public enum PermissionProblem: Error {
 public final class Executor: Sendable {
     let env: Environment
     let logURL: URL
+    /// Copies files off an iPhone and deletes them there; nil where nothing can reach one.
+    let iphone: (any IPhoneMediaTransfer)?
     static let commandTimeout: Duration = .seconds(600)
     public static let needsFullDiskAccess = "Needs Full Disk Access"
 
-    public init(env: Environment, logURL: URL) {
+    public init(env: Environment, logURL: URL, iphone: (any IPhoneMediaTransfer)? = nil) {
         self.env = env
         self.logURL = logURL
+        self.iphone = iphone
     }
 
     public func run(_ plan: Plan, provider: any Provider, items: [Item], pins: Pins,
@@ -95,7 +98,54 @@ public final class Executor: Sendable {
             return .done
         case .copyToTerminal:
             return .shown
+        case .moveFromIPhone(let udid, let files, let folder):
+            return await moveFromIPhone(udid: udid, files: files, to: folder)
         }
+    }
+
+    /// Copies each file to `folder`, and deletes it from the iPhone only if the copy is the size the phone reports.
+    /// A file whose copy doesn't check out stays on the phone, and the bad copy is removed.
+    func moveFromIPhone(udid: String, files: [String], to folder: URL) async -> StepOutcome {
+        guard let transfer = iphone else { return .failed("Ballast can't reach the iPhone's camera roll") }
+        do { try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true) } catch { return failure(error, folder) }
+        var problems: [String] = []
+        var failed = false
+        for path in files {
+            let name = String(path.split(separator: "/").last ?? "")
+            let copy = uniqueURL(in: folder, name: name)
+            do {
+                let expected = try await transfer.download(udid: udid, path: path, to: copy)
+                let actual = (try? FileManager.default.attributesOfItem(atPath: copy.path)[.size] as? Int64) ?? -1
+                guard expected > 0, actual == expected else {
+                    try? FileManager.default.removeItem(at: copy)
+                    problems.append("\(name) stays on the iPhone: the copy is \(max(actual, 0)) bytes, the iPhone says \(expected)")
+                    continue
+                }
+                do { try await transfer.delete(udid: udid, path: path) } catch {
+                    problems.append("\(name) is copied to \(folder.lastPathComponent), but couldn't be deleted from the iPhone: \(error.localizedDescription)")
+                    failed = true
+                }
+            } catch {
+                try? FileManager.default.removeItem(at: copy)
+                problems.append("\(name): \(error.localizedDescription)")
+                failed = true
+            }
+        }
+        if problems.isEmpty { return .done }
+        let why = problems.joined(separator: "\n")
+        return failed ? .failed(why) : .skipped(why)
+    }
+
+    /// `name`, or `name 2.ext`, `name 3.ext` when that file is already there.
+    func uniqueURL(in folder: URL, name: String) -> URL {
+        var url = folder.appending(path: name)
+        let base = (name as NSString).deletingPathExtension, ext = (name as NSString).pathExtension
+        var n = 2
+        while FileManager.default.fileExists(atPath: url.path) {
+            url = folder.appending(path: ext.isEmpty ? "\(base) \(n)" : "\(base) \(n).\(ext)")
+            n += 1
+        }
+        return url
     }
 
     func outcome(_ r: CommandResult) -> StepOutcome {
