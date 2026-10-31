@@ -6,6 +6,8 @@
 
 <p align="center">A menu bar app for macOS that finds the disk space developer tools leave behind, and gives it back safely.</p>
 
+<p align="center"><a href="https://ballast.linear.co.za">ballast.linear.co.za</a> · <a href="https://github.com/linearza/ballast/releases/latest">Download</a></p>
+
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/main-dark.png">
   <img src="docs/screenshots/main.png" alt="Ballast's main window listing Ruby versions, with the default and pinned versions marked and three old versions ticked for removal">
