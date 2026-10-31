@@ -34,6 +34,20 @@ struct Popover: View {
             } else {
                 Text(model.scanning ? "Scanning your disk…" : "No scan yet.").foregroundStyle(.secondary)
             }
+            if let phone = model.iphone, let storage = phone.storage {
+                Divider()
+                Button { open(IPhoneDetail.id) } label: {
+                    HStack {
+                        Image(systemName: "iphone").frame(width: 20)
+                        Text("iPhone: \(formatBytes(storage.free)) free")
+                        Spacer()
+                        Image(systemName: "chevron.right").foregroundStyle(.secondary)
+                    }
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .help("See what's using \(phone.name)'s storage")
+            }
             Divider()
             trash
             Divider()

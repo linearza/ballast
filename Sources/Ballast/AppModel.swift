@@ -21,8 +21,11 @@ import UserNotifications
     /// Shown when macOS blocked Ballast from a protected folder.
     var permission: PermissionProblemInfo?
     var measuring: Set<String> = []
+    /// The connected iPhone, kept when the main window closes so the menu can say how much space it has.
+    var iphone: IPhoneSnapshot?
     let prefs: Preferences
     let updates = UpdateCheck()
+    let imageCapture = ImageCaptureTransfer()
     /// Shows the "Where are your projects?" sheet.
     var firstRun = false
 
@@ -46,7 +49,13 @@ import UserNotifications
 
     var env: Environment { .live(projectRoots: prefs.rootURLs) }
     var providers: [any Provider] {
-        Providers.all.map { $0.id == "projects" ? ProjectLeftoversProvider(idleDays: prefs.idleDays) : $0 }
+        Providers.all.map { p in
+            switch p.id {
+            case "projects": ProjectLeftoversProvider(idleDays: prefs.idleDays)
+            case "iphone": IPhoneProvider(destination: prefs.iphoneFolderURL)
+            default: p
+            }
+        }
     }
     var scanner: DiskScanner { DiskScanner(env: env, providers: providers, summaryURL: Self.summaryURL) }
 
@@ -103,6 +112,7 @@ import UserNotifications
             reports = fresh + kept
             summary = await scanner.lastSummary()
         }
+        if only == nil || only?.contains("iphone") == true { iphone = report("iphone")?.iphone }
         refreshSpace()
         await measureTrash()
     }
@@ -185,7 +195,7 @@ import UserNotifications
         guard state.phase == .confirm else { return }
         state.phase = .running
         let before = free
-        let executor = Executor(env: env, logURL: Self.logURL)
+        let executor = Executor(env: env, logURL: Self.logURL, iphone: imageCapture)
         let results = await executor.run(state.plan, provider: state.provider, items: state.items, pins: scanPins(roots: prefs.rootURLs)) { r in
             Task { @MainActor in state.outcomes[r.step.id] = r.outcome }
         }
@@ -197,9 +207,23 @@ import UserNotifications
         await scanNow(only: [state.provider.id])
         state.freed = max(0, free - before)
         state.phase = .finished
+        if results.contains(where: { $0.outcome == .failed(ImageCaptureTransfer.deniedMessage) }) { explainIPhoneAccess() }
         if let blocked = results.first(where: { $0.outcome == .failed(Executor.needsFullDiskAccess) }) {
             permission = PermissionProblemInfo(path: blocked.step.kind.firstPath, forgot: prefs.hadFullDiskAccess)
         }
+    }
+
+    static let privacySettingsURL = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy")!
+
+    /// macOS refused Ballast the iPhone's photos: say so, and offer the pane where that's changed.
+    func explainIPhoneAccess() {
+        NSApp.activate(ignoringOtherApps: true)
+        let alert = NSAlert()
+        alert.messageText = "Ballast can't open the iPhone's photos"
+        alert.informativeText = "macOS asks before an app reads photos from an iPhone, and it was turned down. Allow Ballast under Privacy & Security (Photos, or Files & Folders), unlock the iPhone, and try again. Nothing was deleted from the iPhone."
+        alert.addButton(withTitle: "Open Privacy & Security")
+        alert.addButton(withTitle: "OK")
+        if alert.runModal() == .alertFirstButtonReturn { NSWorkspace.shared.open(Self.privacySettingsURL) }
     }
 
     /// Measures a locked item when the user asks. macOS may ask for access here.

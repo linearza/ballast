@@ -28,6 +28,10 @@ import Foundation
     var quiet: Bool {
         didSet { defaults.set(quiet, forKey: "quiet") }
     }
+    /// Where videos and photos moved off an iPhone go, a folder per device inside it. Empty means ~/Pictures/From iPhone.
+    var iphoneFolder: String {
+        didSet { defaults.set(iphoneFolder, forKey: "iphoneFolder") }
+    }
     /// Set once measuring a protected folder worked, so a later failure means macOS forgot the grant.
     var hadFullDiskAccess: Bool {
         didSet { defaults.set(hadFullDiskAccess, forKey: "hadFullDiskAccess") }
@@ -43,7 +47,9 @@ import Foundation
         hadFullDiskAccess = defaults.bool(forKey: "hadFullDiskAccess")
         idleDays = defaults.integer(forKey: "idleDays")
         quiet = defaults.bool(forKey: "quiet")
+        iphoneFolder = defaults.string(forKey: "iphoneFolder") ?? ""
     }
 
     var rootURLs: [URL] { projectRoots.map { URL(filePath: $0) } }
+    var iphoneFolderURL: URL? { iphoneFolder.isEmpty ? nil : URL(filePath: iphoneFolder) }
 }

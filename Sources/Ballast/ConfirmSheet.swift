@@ -43,7 +43,7 @@ struct ConfirmSheet: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text(state.phase == .finished ? "Done" : "Remove from \(state.provider.title)?").font(.title3.bold())
+            Text(state.phase == .finished ? "Done" : state.provider.id == "iphone" ? "Clean up your iPhone?" : "Remove from \(state.provider.title)?").font(.title3.bold())
             ScrollView {
                 VStack(alignment: .leading, spacing: 10) {
                     ForEach(state.plan.refusals, id: \.itemID) { r in
@@ -63,7 +63,7 @@ struct ConfirmSheet: View {
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
             }
-            if state.phase == .finished {
+            if state.phase == .finished && state.provider.id != "iphone" {
                 Text("Freed \(formatBytes(state.freed))").font(.headline)
                 if state.trashed > 0 {
                     Text("Moved to Trash: \(formatBytes(state.trashed)), empty the Trash to free it")
@@ -94,7 +94,7 @@ struct ConfirmSheet: View {
     }
 
     var removeButton: some View {
-        Button("Remove · \(formatBytes(state.plan.expectedBytes))", role: state.level == .dangerous ? .destructive : nil) {
+        Button("\(state.provider.id == "iphone" ? "Go ahead" : "Remove") · \(formatBytes(state.plan.expectedBytes))", role: state.level == .dangerous ? .destructive : nil) {
             Task { await model.execute(state) }
         }
         .buttonStyle(.borderedProminent)
@@ -153,7 +153,13 @@ struct StepRow: View {
 
     var undoNote: some View {
         let undo = step.kind.undo
-        return Label(undo.label, systemImage: undo == .fromTrash ? "arrow.uturn.backward" : undo == .never ? "exclamationmark.circle" : "terminal")
+        let symbol = switch undo {
+        case .fromTrash: "arrow.uturn.backward"
+        case .never: "exclamationmark.circle"
+        case .copiedFirst: "doc.on.doc"
+        case .yourCall: "terminal"
+        }
+        return Label(undo.label, systemImage: symbol)
             .font(.caption)
             .foregroundStyle(undo == .never ? Color.orange : Color.secondary)
     }

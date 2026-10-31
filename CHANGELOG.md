@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.5.0 — 2026-10-31
+
+- **Connected iPhone:** plug an iPhone in by USB and Ballast shows how its storage is used (photos and videos, apps, iOS, free space) and offers two clean-ups. It needs libimobiledevice (`brew install libimobiledevice ideviceinstaller`), which Ballast never installs; without it, Ballast says so and offers a Copy button for the command.
+- **Move videos and photos to the Mac:** every camera-roll video over 20 MB and file over 50 MB is listed, biggest first. Each one is copied to `~/Pictures/From iPhone/<device name>` (change the folder in Settings), its size is checked, and only then is it deleted from the iPhone. A copy that doesn't match stays put and the original is left alone. This goes through Image Capture, so the Photos library on the iPhone stays consistent; macOS may ask whether Ballast can open the iPhone's photos.
+- **Uninstall apps** with their size and Documents & Data, with a warning that the app's data goes with it.
+- **Honest about USB:** an iPhone doesn't tell a Mac everything Settings › General › iPhone Storage shows. App sizes include caches iOS clears by itself, and Messages, apps' shared data (Signal keeps its chats there) and System Data can't be broken down, so Ballast shows them as *Not visible over USB*.
+- Moving files off an iPhone warns that with iCloud Photos on, deleting from the iPhone deletes from iCloud and your other devices too. The copies on the Mac stay.
+- The menu shows *iPhone: 1.9 GB free* while one is connected.
+
 ## 0.4.0 — 2026-10-28
 
 - **Quiet mode:** *Go Quiet…* in the menu's gear menu, or the toggle in Settings, hides the menu bar icon and stops Ballast's notifications (low disk space and new releases). It stays quiet until you turn it off; background rescans carry on. Open Ballast from Applications or Spotlight to see its window, and press ⌘, for Settings.

@@ -31,6 +31,7 @@ Old Ruby and Node versions, `node_modules` in projects you forgot about, simulat
 | **AI models** | Ollama, Hugging Face, Whisper, LM Studio, GPT4All, Jan, llama.cpp, DiffusionBee and PyTorch Hub models |
 | **AI tools and editors** | Caches and old workspace data of Cursor, VS Code, Windsurf and the Claude app, old Claude Code versions, and Claude Code history for projects that no longer exist |
 | **Apps** | Your apps with their size and when you last opened them, removed together with their leftovers and background helpers |
+| **Connected iPhone** | What's using an iPhone's storage over USB, its biggest videos and photos (moved to your Mac before they're deleted from the phone) and its apps (uninstalled with their data). Needs libimobiledevice |
 | **Large personal files** | The biggest files in your home folder, only when you ask, with files in iCloud Drive marked |
 
 ## A quick tour
@@ -65,6 +66,13 @@ The menu bar icon shows free space at a glance. Click it for a summary of the bi
   <img src="docs/screenshots/models.png" alt="AI models: Ollama, Hugging Face and LM Studio models with their sizes, two ticked for removal">
 </picture>
 
+**Connected iPhone** appears when an iPhone is plugged in. It shows how the storage is used, then lists the videos and large photos in the camera roll and the apps, biggest first. Videos and photos are moved to your Mac, not just deleted. Over USB a Mac can't see everything Settings › General › iPhone Storage does: app sizes here include caches iOS clears by itself, and Messages, apps' shared data and System Data show up together as *Not visible over USB*.
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/iphone-dark.png">
+  <img src="docs/screenshots/iphone.png" alt="Connected iPhone: a storage bar split into photos and videos, apps, iOS, not visible over USB and free, then large videos and apps with two videos and one app ticked">
+</picture>
+
 ## Safety
 
 Ballast is built so that cleaning up is hard to regret.
@@ -87,6 +95,9 @@ Ballast is built so that cleaning up is hard to regret.
 - **Some things are refused outright:** a worktree with uncommitted changes, a database or virtual machine that's running, an editor's own settings database, an app that ships with macOS. The reason is shown next to the item.
 - **Versions your projects pin are marked.** Removing a language version a project pins names the project and asks you to confirm you understand, and the version is never ticked by **Select safe**.
 - **Each item has a risk level.** *Regenerable* means it can be rebuilt or re-downloaded, *Review* means you should look first, and *Your data* means only you can say whether it's needed. **Select safe** ticks only the regenerable ones, and **Safe to reclaim** at the top of the list (or in the menu) shows all of them in one place.
+- **Videos leave an iPhone only after a checked copy.** Ballast copies each one to your Mac, compares the copy's size with what the iPhone reports, and deletes the original only if they match. If they don't, the file stays on the iPhone and the bad copy is removed.
+- **iCloud Photos is named.** With it on, deleting from the iPhone deletes from iCloud and your other devices too. Moving a video says so and needs **I understand**. The copies on the Mac stay.
+- **Uninstalling an iPhone app deletes its data.** You can reinstall the app, but its data comes back only if the app syncs it somewhere.
 - Every action is logged to `~/Library/Application Support/Ballast/actions.log`.
 
 ## Permissions
@@ -96,6 +107,7 @@ Ballast asks for nothing up front. It reads your home folder like any app you ru
 - **Full Disk Access** is only needed for protected locations (some app containers and the Docker disk image). Ballast shows those items as locked and explains how to grant access if you want them measured.
 - **Administrator steps,** such as removing Docker's system helpers, are never run for you. Ballast shows the exact `sudo` command for you to run in Terminal.
 - **Finder** is used to empty the Trash, so macOS asks whether Ballast can control Finder the first time you click Empty Trash. If you said no, Ballast offers to open **Privacy & Security → Automation** so you can allow it.
+- **Your iPhone** is read with libimobiledevice, which is optional and only needed for this: `brew install libimobiledevice ideviceinstaller`. Ballast never installs it. The iPhone has to be unlocked and trusted. Moving videos and photos goes through Image Capture, so macOS may ask whether Ballast can open the iPhone's photos the first time; if you said no, Ballast offers to open **Privacy & Security**.
 - **The network** is used for two things only: a daily check of GitHub for a newer Ballast, and, if you have the GitHub CLI (`gh`) signed in, asking GitHub whether a worktree's pull request is merged.
 
 ## Install
@@ -150,6 +162,7 @@ Ballast asks where your projects live. It uses those folders to see which langua
 - How often to rescan in the background: off, every 6 hours or every 24 hours
 - When to warn about low free space (10% by default)
 - How long a project must be idle before its build output (`node_modules`, `target`, `.venv` and the like) counts as safe (60 days by default)
+- Where videos and photos moved off an iPhone go (`~/Pictures/From iPhone` by default)
 - Open at login
 - Quiet mode: no menu bar icon and no notifications, while background rescans carry on. **Go Quiet…** in the menu's gear menu turns it on too. It stays on until you turn it off. While quiet, open Ballast from Applications or Spotlight to see its window, and press ⌘, for Settings.
 

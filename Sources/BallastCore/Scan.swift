@@ -17,7 +17,8 @@ public struct Summary: Codable, Sendable, Equatable {
         self.scannedAt = scannedAt
         self.freeBytes = freeBytes
         self.totalBytes = totalBytes
-        concerns = reports.filter { !$0.items.isEmpty }
+        // A phone comes and goes, so it never goes into the saved summary.
+        concerns = reports.filter { !$0.items.isEmpty && $0.iphone == nil }
             .map { Entry(id: $0.id, title: $0.title, symbol: $0.symbol, bytes: $0.total, reclaimable: $0.reclaimable) }
             .sorted { $0.bytes > $1.bytes }
     }
@@ -56,6 +57,12 @@ public actor DiskScanner {
                 next += 1
                 group.addTask(priority: priority) {
                     guard await p.isPresent(env) else { return (i, nil) }
+                    // The iPhone concern also reports what it saw, so the app can say "locked" or "not installed".
+                    if let phone = p as? IPhoneProvider {
+                        let snapshot = await phone.snapshot(env)
+                        return (i, ConcernReport(id: p.id, title: p.title, section: p.section, symbol: p.symbol,
+                                                 items: snapshot.items, scannedAt: env.now(), iphone: snapshot))
+                    }
                     let items = await p.scan(env, pins: pins)
                     return (i, ConcernReport(id: p.id, title: p.title, section: p.section, symbol: p.symbol, items: items, scannedAt: env.now()))
                 }

@@ -1,7 +1,7 @@
 import Foundation
 
 public enum BallastCore {
-    public static let version = "0.4.0"
+    public static let version = "0.5.0"
 }
 
 /// How safe an item is to remove.
@@ -68,6 +68,7 @@ public struct Item: Identifiable, Hashable, Sendable {
 }
 
 public enum Section: String, CaseIterable, Codable, Sendable {
+    case iPhone = "Connected iPhone"
     case toolchains = "Developer toolchains"
     case containers = "Containers and VMs"
     case projects = "Project leftovers"
@@ -87,14 +88,18 @@ public struct ConcernReport: Identifiable, Sendable {
     public var symbol: String
     public var items: [Item]
     public var scannedAt: Date
+    /// What a connected iPhone reported, for the concern that scans one.
+    public var iphone: IPhoneSnapshot?
 
-    public init(id: String, title: String, section: Section, symbol: String, items: [Item], scannedAt: Date) {
+    public init(id: String, title: String, section: Section, symbol: String, items: [Item], scannedAt: Date,
+                iphone: IPhoneSnapshot? = nil) {
         self.id = id
         self.title = title
         self.section = section
         self.symbol = symbol
         self.items = items
         self.scannedAt = scannedAt
+        self.iphone = iphone
     }
 
     public var total: Int64 { items.reduce(0) { $0 + $1.bytes } }
@@ -117,6 +122,9 @@ public enum StepKind: Sendable, Equatable {
     case unloadLoginItem(label: String, plist: URL)
     /// Needs administrator rights: shown with a Copy button, never run by Ballast.
     case copyToTerminal(String)
+    /// Copies camera-roll files (paths like `/DCIM/110APPLE/IMG_0908.MOV`) from an iPhone into a Mac folder,
+    /// checks each copy's size, and deletes a file from the iPhone only once its copy checks out.
+    case moveFromIPhone(udid: String, files: [IPhoneFileRef], to: URL)
 
     /// What the confirmation sheet shows for this step.
     public var display: String {
@@ -127,6 +135,8 @@ public enum StepKind: Sendable, Equatable {
         case .truncate(let url): url.path
         case .unloadLoginItem(let label, let plist): "launchctl bootout gui/\(getuid())/\(label)\n\(plist.path)"
         case .copyToTerminal(let command): command
+        case .moveFromIPhone(_, let files, let folder):
+            files.map { "\($0.path) → \(folder.path)" }.joined(separator: "\n")
         }
     }
 
@@ -136,18 +146,25 @@ public enum StepKind: Sendable, Equatable {
         case .trash, .unloadLoginItem: .fromTrash
         case .command, .shell, .truncate: .never
         case .copyToTerminal: .yourCall
+        case .moveFromIPhone: .copiedFirst
         }
+    }
+
+    /// The data survives the step on the Mac, so it isn't lost the way "your data" usually is.
+    var keepsACopy: Bool {
+        if case .moveFromIPhone = self { true } else { false }
     }
 }
 
 public enum Undo: Sendable, Equatable {
-    case fromTrash, never, yourCall
+    case fromTrash, never, yourCall, copiedFirst
 
     public var label: String {
         switch self {
         case .fromTrash: "Can be put back from the Trash"
         case .never: "Deleted for good"
         case .yourCall: "Ballast won't run this. Only paste it into Terminal if you're sure; it asks for your password"
+        case .copiedFirst: "Copied to your Mac first; deleted from the iPhone only once the copy is checked"
         }
     }
 }
@@ -218,6 +235,7 @@ public func dangerNotes(_ plan: Plan, items: [Item]) -> [String] {
     let planned = Set(plan.steps.compactMap(\.itemID))
     let unexplained = items.filter { planned.contains($0.id) && $0.risk == .yourData }
         .filter { item in !plan.dangers.contains { $0.contains(item.title) } }
+        .filter { item in !plan.steps.contains { $0.itemID == item.id && $0.kind.keepsACopy } }
         .map { "\($0.title) is your data. Only you can tell whether it's still needed, and Ballast can't bring it back." }
     return plan.dangers + unexplained
 }
