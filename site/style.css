@@ -92,7 +92,7 @@ p { margin: 0 0 1em; max-width: 66ch; }
 /* Hero: the window straddles a waterline, half in the paper, half in the deep. */
 .hero { padding-top: clamp(2rem, 6vw, 5rem); }
 .hero-copy { max-width: none; }
-.hero h1 { font-size: clamp(2.9rem, 1.2rem + 8.4vw, 7.6rem); font-weight: 800; letter-spacing: -.035em; line-height: .96; max-width: 11ch; margin-bottom: 1.4rem; }
+.hero h1 { font-size: clamp(2.9rem, 1.2rem + 7vw, 6.6rem); font-weight: 800; letter-spacing: -.02em; line-height: .96; max-width: 11ch; margin-bottom: 1.4rem; }
 .lede { font-size: clamp(1.15rem, 1rem + .7vw, 1.5rem); line-height: 1.45; max-width: 36ch; color: var(--ink-soft); }
 .actions { display: flex; flex-wrap: wrap; gap: .8rem; margin: 1.8rem 0 1rem; }
 .fine { font-size: .95rem; color: var(--ink-soft); margin: 0; }
