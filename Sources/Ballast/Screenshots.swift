@@ -44,6 +44,15 @@ import SwiftUI
             let safe = await render(MainWindowRoot(model: model), size: NSSize(width: 980, height: 600), title: "Ballast", dark: dark)
             save(frame(safe), dir.appending(path: "safe\(suffix).png"))
 
+            fillIPhone(model)
+            model.selection = IPhoneDetail.id
+            model.checked = [IPhoneDetail.id: [mediaID("/DCIM/109APPLE/IMG_0908.MOV"), mediaID("/DCIM/109APPLE/IMG_9758.MOV"), appID("com.example.streaming")]]
+            let phone = await render(MainWindowRoot(model: model), size: NSSize(width: 980, height: 880), title: "Ballast", dark: dark)
+            save(frame(phone), dir.appending(path: "iphone\(suffix).png"))
+            model.reports.removeAll { $0.id == IPhoneDetail.id }
+            model.iphone = nil
+            model.checked = [:]
+
             let popover = await render(Popover(model: model), size: NSSize(width: 320, height: 420), title: nil, dark: dark, fit: true)
             save(frame(popover), dir.appending(path: "menu\(suffix).png"))
 
@@ -137,6 +146,39 @@ import SwiftUI
         model.summary = Summary(reports: model.reports, freeBytes: model.free, totalBytes: model.total, scannedAt: now - 3 * 3600)
         model.prefs.projectRoots = [home + "/Code", home + "/Work"].map { $0.replacingOccurrences(of: home, with: NSHomeDirectory()) }
         model.prefs.rootsConfirmed = true
+    }
+
+    static let udid = "00000000-0000000000000000"
+    static func mediaID(_ path: String) -> String { "iphone.\(udid).media.\(path)" }
+    static func appID(_ bundle: String) -> String { "iphone.\(udid).app.\(bundle)" }
+
+    /// A made-up 64 GB iPhone that is nearly full.
+    static func fillIPhone(_ model: AppModel) {
+        func video(_ name: String, _ mb: Int64, _ date: String) -> Item {
+            Item(id: mediaID("/DCIM/109APPLE/\(name)"), title: name, detail: "Video · \(date) · on iPhone", paths: [], bytes: mb * Self.mb, risk: .yourData)
+        }
+        func app(_ bundle: String, _ name: String, _ appMB: Int64, _ dataMB: Int64) -> Item {
+            Item(id: appID(bundle), title: name, detail: "App \(formatBytes(appMB * Self.mb)) · Documents & Data \(formatBytes(dataMB * Self.mb))",
+                 paths: [], bytes: (appMB + dataMB) * Self.mb, risk: .yourData)
+        }
+        let media = [video("IMG_0908.MOV", 277, "29 Sep 2025"), video("IMG_9758.MOV", 221, "27 Jun 2025"), video("IMG_9760.MOV", 196, "27 Jun 2025"),
+                     video("IMG_0293.MP4", 181, "10 Aug 2025"), video("IMG_1802.MOV", 141, "1 Jan 2026"), video("IMG_1804.MOV", 119, "1 Jan 2026"),
+                     video("IMG_0412.MOV", 64, "3 Mar 2026"), video("IMG_0177.MOV", 38, "12 Feb 2026")]
+        let apps = [app("com.example.music", "Spotify", 280, 2_140), app("com.example.streaming", "YouTube", 352, 1_090), app("com.example.browser", "Brave", 340, 804),
+                    app("com.example.chat", "Signal", 185, 653), app("com.example.work", "Slack", 349, 306), app("com.example.maps", "Maps Offline", 120, 410),
+                    app("com.example.notes", "Notes Plus", 90, 150), app("com.example.bank", "Bank", 194, 303), app("com.example.fitness", "Run Club", 160, 95),
+                    app("com.example.games", "Word Garden", 220, 540), app("com.example.camera", "Pocket Camera", 140, 780)]
+        var snap = IPhoneSnapshot(state: .ready, udid: udid)
+        snap.name = "Sample iPhone"
+        snap.osVersion = "18.6.2"
+        snap.capacity = 64 * gb
+        snap.storage = IPhoneStorage(dataCapacity: 57_407_352_832, dataAvailable: 1_899_155_456, system: 6_559_047_680, photos: 16_729_113_438,
+                                     apps: apps.reduce(0) { $0 + $1.bytes })
+        snap.media = IPhoneMediaTally(photoCount: 3_386, photoBytes: 7_960 * mb, videoCount: 376, videoBytes: 7_750 * mb)
+        snap.items = media + apps
+        let p = Providers.all.first { $0.id == IPhoneDetail.id }!
+        model.reports.insert(ConcernReport(id: p.id, title: p.title, section: p.section, symbol: p.symbol, items: snap.items, scannedAt: Date(), iphone: snap), at: 0)
+        model.iphone = snap
     }
 
     static func confirmState(_ model: AppModel) -> RunState {

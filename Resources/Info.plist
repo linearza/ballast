@@ -14,6 +14,8 @@
 	<key>LSUIElement</key><true/>
 	<key>NSHumanReadableCopyright</key><string>© 2026 linearza. MIT licence.</string>
 	<key>NSAppleEventsUsageDescription</key><string>Ballast asks Finder to empty the Trash when you click Empty Trash.</string>
+	<key>NSPhotoLibraryUsageDescription</key><string>Ballast copies large videos and photos from your iPhone to this Mac, and deletes them from the iPhone only once the copy is checked.</string>
+	<key>NSCameraUsageDescription</key><string>Ballast reads your iPhone's camera roll through Image Capture to copy large videos and photos to this Mac.</string>
 	<key>BallastRepo</key><string>__REPO__</string>
 </dict>
 </plist>

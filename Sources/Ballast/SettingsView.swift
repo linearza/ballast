@@ -10,6 +10,10 @@ struct SettingsView: View {
 
     var prefs: Preferences { model.prefs }
 
+    var iphoneFolderLabel: String {
+        (prefs.iphoneFolder.isEmpty ? "~/Pictures/From iPhone" : prefs.iphoneFolder).replacingOccurrences(of: NSHomeDirectory(), with: "~")
+    }
+
     var body: some View {
         Form {
             SwiftUI.Section("Project folders") {
@@ -30,6 +34,17 @@ struct SettingsView: View {
                         value: Binding(get: { prefs.lowSpacePercent }, set: { prefs.lowSpacePercent = $0 }), in: 1...50)
                 Stepper("Build output idle after \(prefs.idleDays) days",
                         value: Binding(get: { prefs.idleDays }, set: { prefs.idleDays = $0 }), in: 7...365, step: 7)
+            }
+            SwiftUI.Section("iPhone") {
+                HStack {
+                    Image(systemName: "folder")
+                    Text(iphoneFolderLabel)
+                    Spacer()
+                    Button("Choose…") { if let url = chooseFolder() { prefs.iphoneFolder = url.path } }
+                    Button("Reset") { prefs.iphoneFolder = "" }.disabled(prefs.iphoneFolder.isEmpty)
+                }
+                Text("Videos and photos moved off a connected iPhone are copied here, into a folder named after the iPhone.")
+                    .font(.caption).foregroundStyle(.secondary)
             }
             SwiftUI.Section("General") {
                 Toggle("Open Ballast at login", isOn: Binding(get: { login.enabled }, set: { login.set($0) }))
