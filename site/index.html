@@ -1,0 +1,218 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ballast: get your disk space back from developer tools</title>
+<meta name="description" content="Ballast is a free, open-source menu bar app for macOS that finds the disk space developer tools leave behind, and gives it back safely.">
+<meta name="color-scheme" content="light dark">
+<link rel="icon" href="icon.png">
+<link rel="apple-touch-icon" href="icon.png">
+<link rel="canonical" href="https://ballast.linear.co.za/">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Ballast: get your disk space back from developer tools">
+<meta property="og:description" content="A free, open-source macOS menu bar app that finds the disk space developer tools leave behind, and gives it back safely.">
+<meta property="og:url" content="https://ballast.linear.co.za/">
+<meta property="og:image" content="https://ballast.linear.co.za/screenshots/main.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Instrument+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+
+<header class="top">
+  <a class="brand" href="#top" aria-label="Ballast, back to top"><img src="icon.png" width="32" height="32" alt="">Ballast</a>
+  <nav aria-label="Page">
+    <a href="#finds">What it finds</a>
+    <a href="#tour">Tour</a>
+    <a href="#iphone">iPhone</a>
+    <a href="#safety">Safety</a>
+    <a href="#install">Install</a>
+    <a href="https://github.com/linearza/ballast">GitHub</a>
+  </nav>
+</header>
+
+<main id="main">
+
+<section class="hero" id="top">
+  <div class="hero-copy">
+    <h1>Give your disk its space back.</h1>
+    <p class="lede">Ballast is a menu bar app for macOS that finds the disk space developer tools leave behind, and gives it back safely.</p>
+    <p class="actions">
+      <a class="btn btn-primary" href="https://github.com/linearza/ballast/releases/latest">Download Ballast</a>
+      <a class="btn" href="https://github.com/linearza/ballast">View on GitHub</a>
+    </p>
+    <p class="fine">Free · open source · macOS 14+</p>
+  </div>
+  <figure class="hero-shot">
+    <picture>
+      <source media="(prefers-color-scheme: dark)" srcset="screenshots/main-dark.png">
+      <img src="screenshots/main.png" width="2120" height="1464" alt="Ballast's main window listing Ruby versions, with the default and pinned versions marked and three old versions ticked for removal">
+    </picture>
+  </figure>
+</section>
+
+<section class="intro">
+  <p>Old Ruby and Node versions, <code>node_modules</code> in projects you forgot about, simulator runtimes, Docker images, package caches, AI models you tried once. Developer tools leave tens of gigabytes behind, and most clean-up apps either can't see them or can't tell what's still in use.</p>
+  <p>Ballast knows which version your projects pin, which worktree still has unpushed work and which database is running, and it shows you exactly what it will do before it does anything.</p>
+</section>
+
+<section class="finds" id="finds" aria-labelledby="finds-h">
+  <div class="sec-head">
+    <h2 id="finds-h">What it finds</h2>
+    <p>More than 60 tools, across everything developer work leaves on a disk.</p>
+  </div>
+  <dl class="ledger">
+    <div><dt>Developer toolchains</dt><dd>Ruby, Node and Python versions (rvm, rbenv, chruby, frum, asdf, mise, nvm, fnm, n, nodenv, pyenv, uv), conda environments, pipx apps and Poetry, Pipenv and Hatch virtualenvs; Java, Go, Rust, Elixir, PHP and other languages (SDKMAN, goenv, rustup, asdf, mise); Homebrew leftovers and runaway service logs, GitHub Actions runners.</dd></div>
+    <div><dt>Xcode and Android</dt><dd>Xcode versions, simulators, runtimes, device support for iOS, watchOS, tvOS and visionOS, simulator logs and docs; Android system images, NDKs and emulators.</dd></div>
+    <div><dt>Containers and VMs</dt><dd>Docker images, volumes and build cache, Docker Desktop itself, Colima, Lima, minikube, Podman and Rancher Desktop machines, Parallels and VMware virtual machines.</dd></div>
+    <div><dt>Project leftovers</dt><dd>Build output in projects you haven't touched for a while (<code>node_modules</code>, <code>target</code>, <code>.venv</code>, <code>.next</code>, <code>Pods</code>, <code>.gradle</code>, <code>_build</code> and more), and git worktrees whose pull request is merged.</dd></div>
+    <div><dt>Caches</dt><dd>Package manager caches (npm, Yarn, pnpm, Bun, Deno, pip, uv, Poetry, conda, Cargo, Go modules, Gradle, Maven, sbt, CocoaPods, Carthage, SwiftPM, NuGet, Composer and more) and large app caches.</dd></div>
+    <div><dt>Local databases</dt><dd>Postgres, MySQL, Redis and others from Homebrew, Postgres.app and DBngin.</dd></div>
+    <div><dt>AI models</dt><dd>Ollama, Hugging Face, Whisper, LM Studio, GPT4All, Jan, llama.cpp, DiffusionBee and PyTorch Hub models.</dd></div>
+    <div><dt>AI tools and editors</dt><dd>Caches and old workspace data of Cursor, VS Code, Windsurf and the Claude app, old Claude Code versions, and Claude Code history for projects that no longer exist.</dd></div>
+    <div><dt>Apps</dt><dd>Your apps with their size and when you last opened them, removed together with their leftovers and background helpers.</dd></div>
+    <div><dt>Large personal files</dt><dd>The biggest files in your home folder, only when you ask, with files in iCloud Drive marked.</dd></div>
+  </dl>
+</section>
+
+<section class="tour" id="tour" aria-labelledby="tour-h">
+  <div class="sec-head">
+    <h2 id="tour-h">A quick tour</h2>
+    <p>The menu bar icon shows free space at a glance. Click it for a summary of the biggest concerns and what's safe to reclaim, or open the main window to review and remove things.</p>
+  </div>
+
+  <article class="step step-small">
+    <div class="step-text">
+      <h3>The menu</h3>
+      <p>Free space, what's safe to reclaim, the biggest concerns and the Trash, one click from the menu bar.</p>
+    </div>
+    <figure>
+      <picture>
+        <source media="(prefers-color-scheme: dark)" srcset="screenshots/menu-dark.png">
+        <img src="screenshots/menu.png" width="800" height="838" loading="lazy" alt="The Ballast menu: free space, what's safe to reclaim, the biggest concerns and the Trash">
+      </picture>
+    </figure>
+  </article>
+
+  <article class="step">
+    <div class="step-text">
+      <h3>Safe to reclaim</h3>
+      <p>Everything Ballast is sure you can remove: caches, old downloads and build output that come back when needed, and nothing you use. Review and remove a group at a time.</p>
+    </div>
+    <figure>
+      <picture>
+        <source media="(prefers-color-scheme: dark)" srcset="screenshots/safe-dark.png">
+        <img src="screenshots/safe.png" width="2120" height="1464" loading="lazy" alt="Safe to reclaim: 38.75 GB of simulator runtimes, package caches and old Ruby versions, grouped by tool, each group with a Review and remove button">
+      </picture>
+    </figure>
+  </article>
+
+  <article class="step">
+    <div class="step-text">
+      <h3>Project leftovers</h3>
+      <p>Which <code>node_modules</code> and other build folders belong to projects you haven't touched in a while, and which git worktrees are done with: their pull request is merged and nothing is left uncommitted or unpushed.</p>
+    </div>
+    <figure>
+      <picture>
+        <source media="(prefers-color-scheme: dark)" srcset="screenshots/projects-dark.png">
+        <img src="screenshots/projects.png" width="2120" height="1464" loading="lazy" alt="Project leftovers: idle node_modules folders and git worktrees, badged with merged or open pull requests and uncommitted changes">
+      </picture>
+    </figure>
+  </article>
+
+  <article class="step">
+    <div class="step-text">
+      <h3>AI models</h3>
+      <p>Every model you've downloaded, wherever the tool put it. Ollama models are removed with <code>ollama rm</code>, and a blob two models share stays until neither needs it.</p>
+    </div>
+    <figure>
+      <picture>
+        <source media="(prefers-color-scheme: dark)" srcset="screenshots/models-dark.png">
+        <img src="screenshots/models.png" width="2120" height="1464" loading="lazy" alt="AI models: Ollama, Hugging Face and LM Studio models with their sizes, two ticked for removal">
+      </picture>
+    </figure>
+  </article>
+</section>
+
+<section class="iphone" id="iphone" aria-labelledby="iphone-h">
+  <div class="iphone-text">
+    <h2 id="iphone-h">Your iPhone is a disk too.</h2>
+    <p>Plug in an iPhone by USB and Ballast shows what's using its storage, including what it can't see over USB.</p>
+    <ul class="plain">
+      <li>It moves large videos and photos to the Mac, checking each copy before it deletes the original from the phone.</li>
+      <li>With iCloud Photos on, deleting removes them everywhere. Ballast warns you first.</li>
+      <li>It can uninstall apps from the phone.</li>
+    </ul>
+    <p class="note">Needs <code>brew install libimobiledevice ideviceinstaller</code>.</p>
+  </div>
+  <figure>
+    <picture>
+      <source media="(prefers-color-scheme: dark)" srcset="screenshots/iphone-dark.png">
+      <img src="screenshots/iphone.png" loading="lazy" alt="Ballast showing a connected iPhone and what is using its storage">
+    </picture>
+  </figure>
+</section>
+
+<section class="safety" id="safety" aria-labelledby="safety-h">
+  <div class="safety-head">
+    <h2 id="safety-h">Cleaning up should be hard to regret.</h2>
+    <figure>
+      <picture>
+        <source media="(prefers-color-scheme: dark)" srcset="screenshots/confirm-dark.png">
+        <img src="screenshots/confirm.png" width="2120" height="1464" loading="lazy" alt="The confirmation sheet: a Read this first box saying Ruby 3.2.2 is pinned by billing-api, an I understand checkbox, and each command marked Deleted for good">
+      </picture>
+    </figure>
+  </div>
+  <ul class="rules">
+    <li><strong>Nothing happens without a preview.</strong> You tick items, then see every step Ballast will take, each path it will move and each command it will run, before you confirm.</li>
+    <li><strong>It checks again before acting.</strong> If something changed since the scan (a version is now pinned, a worktree has new changes, a database is running), that step is skipped and the reason is shown.</li>
+    <li><strong>Each step says whether it can be undone.</strong> Files go to the Trash. Commands a tool runs for itself, such as <code>brew uninstall</code> or <code>docker image rm</code>, delete for good, and the step says so.</li>
+    <li><strong>The more it matters, the more it asks.</strong> Anything that can lose your work lists what's at stake under <em>Read this first</em>, and Remove stays off until you tick <em>I understand</em>.</li>
+    <li><strong>Versions your projects pin are marked,</strong> and never ticked by <em>Select safe</em>.</li>
+    <li><strong>Some folders are never removed,</strong> whatever a scan finds: your home folder and its Documents, Desktop, Downloads and Library, your SSH and GPG keys, Keychains, and macOS's own folders.</li>
+    <li><strong>Some things are refused outright:</strong> a worktree with uncommitted changes, a database or virtual machine that's running, an app that ships with macOS.</li>
+    <li><strong>Every action is logged</strong> to <code>~/Library/Application Support/Ballast/actions.log</code>.</li>
+  </ul>
+</section>
+
+<section class="install" id="install" aria-labelledby="install-h">
+  <div class="sec-head">
+    <h2 id="install-h">Install</h2>
+    <p>Needs macOS 14 or later.</p>
+  </div>
+  <div class="install-grid">
+    <div>
+      <h3>From a release</h3>
+      <p>Download <code>Ballast-x.y.z.zip</code> from <a href="https://github.com/linearza/ballast/releases/latest">Releases</a>, unzip it, and move <code>Ballast.app</code> to <code>~/Applications</code> or <code>/Applications</code>.</p>
+      <p>Ballast is not notarised, so macOS blocks it the first time. Either open <strong>System Settings → Privacy &amp; Security</strong> and click <strong>Open Anyway</strong>, or run:</p>
+      <pre><code>xattr -dr com.apple.quarantine ~/Applications/Ballast.app</code></pre>
+    </div>
+    <div>
+      <h3>From source</h3>
+      <p>You need Swift 6. The Command Line Tools are enough (<code>xcode-select --install</code>); you don't need Xcode.</p>
+      <pre><code>git clone https://github.com/linearza/ballast.git
+cd ballast
+make install</code></pre>
+      <p>This builds Ballast, copies it to <code>~/Applications</code> and opens it.</p>
+    </div>
+  </div>
+</section>
+
+<section class="privacy" aria-labelledby="privacy-h">
+  <h2 id="privacy-h">Asks for nothing.</h2>
+  <p>No account, no analytics, and no permissions up front. If a step needs more, such as Full Disk Access for a protected location, Ballast says so when you reach that step. The network is used for two things only: a daily check of GitHub for a newer Ballast and, if you have the GitHub CLI signed in, asking GitHub whether a worktree's pull request is merged.</p>
+</section>
+
+</main>
+
+<footer class="foot">
+  <p class="foot-brand"><img src="icon.png" width="24" height="24" alt="">Ballast</p>
+  <p>Released under the MIT licence.</p>
+  <p><a href="https://github.com/linearza/ballast">github.com/linearza/ballast</a></p>
+</footer>
+</body>
+</html>

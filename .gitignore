@@ -2,3 +2,5 @@
 dist/
 .superpowers/
 .DS_Store
+site/screenshots/
+site/icon.png
