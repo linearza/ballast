@@ -7,11 +7,12 @@ final class FakeTransfer: IPhoneMediaTransfer, @unchecked Sendable {
     private let lock = NSLock()
     private var _deleted: [String] = []
     private var _downloaded: [String] = []
-    var copyBytes: Int
-    var reportedBytes: Int64
+    /// Nil means "the size the scan saw".
+    var copyBytes: Int64?
+    var reportedBytes: Int64?
     var downloadError: IPhoneTransferError?
 
-    init(copyBytes: Int = 100, reportedBytes: Int64 = 100) {
+    init(copyBytes: Int64? = nil, reportedBytes: Int64? = nil) {
         self.copyBytes = copyBytes
         self.reportedBytes = reportedBytes
     }
@@ -19,15 +20,19 @@ final class FakeTransfer: IPhoneMediaTransfer, @unchecked Sendable {
     var deleted: [String] { lock.withLock { _deleted } }
     var downloaded: [String] { lock.withLock { _downloaded } }
 
-    func download(udid: String, path: String, to destination: URL) async throws -> Int64 {
-        lock.withLock { _downloaded.append(path) }
+    func download(udid: String, file: IPhoneFileRef, to destination: URL) async throws -> Int64 {
+        lock.withLock { _downloaded.append(file.path) }
         if let downloadError { throw downloadError }
-        try Data(repeating: 0x61, count: copyBytes).write(to: destination)
-        return reportedBytes
+        // A sparse file of the right length, so a 112 MB video costs nothing.
+        FileManager.default.createFile(atPath: destination.path, contents: nil)
+        let handle = try FileHandle(forWritingTo: destination)
+        defer { try? handle.close() }
+        try handle.truncate(atOffset: UInt64(copyBytes ?? file.bytes))
+        return reportedBytes ?? file.bytes
     }
 
-    func delete(udid: String, path: String) async throws {
-        lock.withLock { _deleted.append(path) }
+    func delete(udid: String, file: IPhoneFileRef) async throws {
+        lock.withLock { _deleted.append(file.path) }
     }
 }
 
@@ -273,7 +278,7 @@ final class FakeTransfer: IPhoneMediaTransfer, @unchecked Sendable {
         let video = try #require(items.first { $0.title == "IMG_0908.MOV" })
         let plan = await IPhoneProvider().plan([video.id], items: items, env: env)
         let folder = f.url("Pictures/From iPhone/Sample iPhone")
-        #expect(plan.steps.map(\.kind) == [.moveFromIPhone(udid: Self.udid, files: ["/DCIM/110APPLE/IMG_0908.MOV"], to: folder)])
+        #expect(plan.steps.map(\.kind) == [.moveFromIPhone(udid: Self.udid, files: [IPhoneFileRef(path: "/DCIM/110APPLE/IMG_0908.MOV", bytes: 112 * Self.mb)], to: folder)])
         #expect(plan.steps.first?.kind.undo.label == "Copied to your Mac first; deleted from the iPhone only once the copy is checked")
         #expect(plan.steps.first?.expectedBytes == 112 * Self.mb)
         #expect(plan.dangers == ["If iCloud Photos is on, deleting from this iPhone deletes from iCloud and your other devices too. The copies on this Mac stay."])
@@ -287,8 +292,25 @@ final class FakeTransfer: IPhoneMediaTransfer, @unchecked Sendable {
         let provider = IPhoneProvider(destination: f.url("Backups"))
         let items = await provider.scan(env, pins: Pins())
         let plan = await provider.plan([items[0].id], items: items, env: env)
-        #expect(plan.steps.first?.kind == .moveFromIPhone(udid: Self.udid, files: [items[0].id.replacingOccurrences(of: "iphone.\(Self.udid).media.", with: "")],
+        #expect(plan.steps.first?.kind == .moveFromIPhone(udid: Self.udid, files: [IPhoneFileRef(path: items[0].id.replacingOccurrences(of: "iphone.\(Self.udid).media.", with: ""), bytes: items[0].bytes)],
                                                         to: f.url("Backups/Sample iPhone")))
+    }
+
+    // MARK: - Finding the file again
+
+    @Test func aFileIsMatchedByNameAndExactSizeIgnoringFolders() {
+        let candidates: [(name: String, bytes: Int64)] = [("IMG_0908.MOV", 277_003_663), ("IMG_0908.MOV", 5), ("IMG_0909.MOV", 277_003_663)]
+        #expect(matchingFiles(name: "IMG_0908.MOV", bytes: 277_003_663, in: candidates) == [0])
+        #expect(matchingFiles(name: "IMG_0908.MOV", bytes: 6, in: candidates).isEmpty)
+        let twins: [(name: String, bytes: Int64)] = [("A.MOV", 9), ("A.MOV", 9)]
+        #expect(matchingFiles(name: "A.MOV", bytes: 9, in: twins) == [0, 1])
+    }
+
+    @Test func serialsMatchThroughDroppedZerosAndDashes() {
+        #expect(sameSerial("00008030-00C08282610402E", "00008030-000C08282610402E"))
+        #expect(sameSerial("00008030000C08282610402E", "00008030-000C08282610402E"))
+        #expect(!sameSerial("00008030-000C08282610402F", "00008030-000C08282610402E"))
+        #expect(!sameSerial("", ""))
     }
 
     // MARK: - Recheck
@@ -333,29 +355,29 @@ final class FakeTransfer: IPhoneMediaTransfer, @unchecked Sendable {
 
     @Test func moveCopiesChecksTheSizeThenDeletes() async throws {
         let f = Fixture()
-        let transfer = FakeTransfer(copyBytes: 100, reportedBytes: 100)
+        let transfer = FakeTransfer()
         let results = await execute(f, files: ["IMG_0908.MOV"], transfer: transfer)
         #expect(results.map(\.outcome) == [.done])
         #expect(transfer.deleted == ["/DCIM/110APPLE/IMG_0908.MOV"])
         let copy = f.url("Pictures/From iPhone/Sample iPhone/IMG_0908.MOV")
-        #expect(try FileManager.default.attributesOfItem(atPath: copy.path)[.size] as? Int == 100)
+        #expect(try FileManager.default.attributesOfItem(atPath: copy.path)[.size] as? Int == 112_000_000)
     }
 
     @Test func moveNeverDeletesAFileWhoseCopyIsTheWrongSize() async {
         let f = Fixture()
-        let transfer = FakeTransfer(copyBytes: 60, reportedBytes: 100)
+        let transfer = FakeTransfer(copyBytes: 60)
         let results = await execute(f, files: ["IMG_0908.MOV"], transfer: transfer)
         #expect(transfer.downloaded == ["/DCIM/110APPLE/IMG_0908.MOV"])
         #expect(transfer.deleted.isEmpty)
         guard case .skipped(let why) = results.first?.outcome else { Issue.record("expected skipped"); return }
-        #expect(why == "IMG_0908.MOV stays on the iPhone: the copy is 60 bytes, the iPhone says 100")
+        #expect(why == "IMG_0908.MOV stays on the iPhone: the copy is 60 bytes, the iPhone says 112000000")
         // The bad copy is not left behind to be mistaken for the real one.
         #expect(!FileManager.default.fileExists(atPath: f.url("Pictures/From iPhone/Sample iPhone/IMG_0908.MOV").path))
     }
 
     @Test func moveNeverDeletesWhenThePhoneReportsNoSize() async {
         let f = Fixture()
-        let transfer = FakeTransfer(copyBytes: 0, reportedBytes: 0)
+        let transfer = FakeTransfer(copyBytes: 112_000_000, reportedBytes: 0)
         let results = await execute(f, files: ["IMG_0908.MOV"], transfer: transfer)
         #expect(transfer.deleted.isEmpty)
         guard case .skipped = results.first?.outcome else { Issue.record("expected skipped"); return }

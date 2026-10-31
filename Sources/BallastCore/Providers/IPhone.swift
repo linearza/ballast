@@ -141,7 +141,7 @@ public struct IPhoneProvider: Provider {
                 plan.dangers.append("Uninstalling \(item.title) deletes everything it keeps on the iPhone. You can reinstall it from the App Store, but its data comes back only if the app syncs it somewhere.")
             case .media:
                 if folders[parsed.udid] == nil { folders[parsed.udid] = await folder(for: parsed.udid, env) }
-                plan.steps.append(Step("Move \(item.title) to your Mac", .moveFromIPhone(udid: parsed.udid, files: [parsed.rest], to: folders[parsed.udid]!),
+                plan.steps.append(Step("Move \(item.title) to your Mac", .moveFromIPhone(udid: parsed.udid, files: [IPhoneFileRef(path: parsed.rest, bytes: item.bytes)], to: folders[parsed.udid]!),
                                        bytes: item.bytes, itemID: item.id))
             }
         }
@@ -380,14 +380,45 @@ public struct IPhoneTransferError: Error, LocalizedError, Equatable {
     }
 }
 
+/// A camera-roll file as the scan saw it. Image Capture names its folders differently from the phone's
+/// filesystem, so the file is found again by name and exact size, not by folder.
+public struct IPhoneFileRef: Sendable, Equatable {
+    /// On the phone's filesystem: `/DCIM/110APPLE/IMG_0908.MOV`.
+    public var path: String
+    public var bytes: Int64
+
+    public init(path: String, bytes: Int64) {
+        self.path = path
+        self.bytes = bytes
+    }
+
+    public var name: String { String(path.split(separator: "/").last ?? "") }
+}
+
+/// Indices of the candidates with this name and exactly this size. One match is the file; none means it's gone;
+/// more than one means Ballast can't tell which, so it touches none.
+public func matchingFiles(name: String, bytes: Int64, in candidates: [(name: String, bytes: Int64)]) -> [Int] {
+    candidates.indices.filter { candidates[$0].name == name && candidates[$0].bytes == bytes }
+}
+
+/// Image Capture writes a serial like `00008030-00C08282610402E` where the UDID is `00008030-000C08282610402E`:
+/// the same digits with a zero dropped. Dashes and leading zeros of each part are ignored.
+public func sameSerial(_ a: String, _ b: String) -> Bool {
+    func normal(_ s: String) -> String {
+        s.uppercased().split(separator: "-").map { String($0.drop { $0 == "0" }) }.joined()
+    }
+    let x = normal(a), y = normal(b)
+    return !x.isEmpty && x == y
+}
+
 /// Copies camera-roll files off a phone and deletes them there. The real one uses ImageCaptureCore, which is
 /// what Image Capture uses and keeps the Photos library consistent; the executor only decides *whether* to delete.
 public protocol IPhoneMediaTransfer: Sendable {
     /// Copies the file at `path` (like `/DCIM/110APPLE/IMG_0908.MOV`) to `destination`, and returns the size
     /// in bytes the iPhone reports for it.
-    func download(udid: String, path: String, to destination: URL) async throws -> Int64
+    func download(udid: String, file: IPhoneFileRef, to destination: URL) async throws -> Int64
     /// Deletes the file from the iPhone's camera roll.
-    func delete(udid: String, path: String) async throws
+    func delete(udid: String, file: IPhoneFileRef) async throws
 }
 
 // MARK: - Parsing
@@ -441,7 +472,10 @@ func stripANSI(_ s: String) -> String {
     s.replacing(/\u{1B}\[[0-9;]*[A-Za-z]/, with: "")
 }
 
-nonisolated(unsafe) private let listingLine = /([-dl])[rwx-]{9}\s+\d+\s+\S+\s+\S+\s+(\d+)\s+(\d{1,2}) ([A-Za-z]{3}) (\d{4}) (\d{2}):(\d{2}):(\d{2}) (.+)/
+/// Built on each use: a Regex value isn't Sendable, so it can't be a global.
+private var listingLine: Regex<(Substring, Substring, Substring, Substring, Substring, Substring, Substring, Substring, Substring, Substring)> {
+    /([-dl])[rwx-]{9}\s+\d+\s+\S+\s+\S+\s+(\d+)\s+(\d{1,2}) ([A-Za-z]{3}) (\d{4}) (\d{2}):(\d{2}):(\d{2}) (.+)/
+}
 
 /// Folders of `ls -l /DCIM` (`110APPLE`), skipping `.MISC` and anything else that isn't a numbered camera folder.
 func parseFolders(_ output: String) -> [String] {

@@ -105,23 +105,24 @@ public final class Executor: Sendable {
 
     /// Copies each file to `folder`, and deletes it from the iPhone only if the copy is the size the phone reports.
     /// A file whose copy doesn't check out stays on the phone, and the bad copy is removed.
-    func moveFromIPhone(udid: String, files: [String], to folder: URL) async -> StepOutcome {
+    func moveFromIPhone(udid: String, files: [IPhoneFileRef], to folder: URL) async -> StepOutcome {
         guard let transfer = iphone else { return .failed("Ballast can't reach the iPhone's camera roll") }
         do { try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true) } catch { return failure(error, folder) }
         var problems: [String] = []
         var failed = false
-        for path in files {
-            let name = String(path.split(separator: "/").last ?? "")
+        for file in files {
+            let name = file.name
             let copy = uniqueURL(in: folder, name: name)
             do {
-                let expected = try await transfer.download(udid: udid, path: path, to: copy)
+                let reported = try await transfer.download(udid: udid, file: file, to: copy)
                 let actual = (try? FileManager.default.attributesOfItem(atPath: copy.path)[.size] as? Int64) ?? -1
-                guard expected > 0, actual == expected else {
+                // The copy has to be the size the scan saw and the size Image Capture reports.
+                guard file.bytes > 0, actual == file.bytes, actual == reported else {
                     try? FileManager.default.removeItem(at: copy)
-                    problems.append("\(name) stays on the iPhone: the copy is \(max(actual, 0)) bytes, the iPhone says \(expected)")
+                    problems.append("\(name) stays on the iPhone: the copy is \(max(actual, 0)) bytes, the iPhone says \(file.bytes)")
                     continue
                 }
-                do { try await transfer.delete(udid: udid, path: path) } catch {
+                do { try await transfer.delete(udid: udid, file: file) } catch {
                     problems.append("\(name) is copied to \(folder.lastPathComponent), but couldn't be deleted from the iPhone: \(error.localizedDescription)")
                     failed = true
                 }

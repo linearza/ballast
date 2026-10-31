@@ -22,8 +22,8 @@ final class ImageCaptureTransfer: NSObject, IPhoneMediaTransfer, ICDeviceBrowser
 
     // MARK: - IPhoneMediaTransfer
 
-    func download(udid: String, path: String, to destination: URL) async throws -> Int64 {
-        let (_, file) = try await locate(udid: udid, path: path)
+    func download(udid: String, file ref: IPhoneFileRef, to destination: URL) async throws -> Int64 {
+        let (_, file) = try await locate(udid: udid, ref)
         let wanted = destination.lastPathComponent
         let saved: String = try await withCheckedThrowingContinuation { cont in
             let file = Box(value: file)
@@ -42,8 +42,8 @@ final class ImageCaptureTransfer: NSObject, IPhoneMediaTransfer, ICDeviceBrowser
         return Int64(file.fileSize)
     }
 
-    func delete(udid: String, path: String) async throws {
-        let (camera, file) = try await locate(udid: udid, path: path)
+    func delete(udid: String, file ref: IPhoneFileRef) async throws {
+        let (camera, file) = try await locate(udid: udid, ref)
         try await withCheckedThrowingContinuation { (cont: CheckedContinuation<Void, Error>) in
             let camera = Box(value: camera), file = Box(value: file)
             DispatchQueue.main.async {
@@ -57,19 +57,15 @@ final class ImageCaptureTransfer: NSObject, IPhoneMediaTransfer, ICDeviceBrowser
 
     // MARK: - Finding the file
 
-    /// The camera and the one file on it at `/DCIM/<folder>/<name>`. Two matches mean Ballast can't tell which, so neither is touched.
-    private func locate(udid: String, path: String) async throws -> (ICCameraDevice, ICCameraFile) {
-        let parts = path.split(separator: "/").map(String.init)
-        guard parts.count == 3, parts[0] == "DCIM" else { throw IPhoneTransferError("Not a camera roll file: \(path)") }
+    /// The camera and the one file on it with this name and exact size. Image Capture's folders (`202509__`) don't
+    /// match the phone's (`110APPLE`), so the folder is ignored. Two matches mean Ballast can't tell which, so neither is touched.
+    private func locate(udid: String, _ ref: IPhoneFileRef) async throws -> (ICCameraDevice, ICCameraFile) {
         let camera = try await openCamera(udid: udid)
-        let matches = await MainActor.run {
-            Box(value: (camera.mediaFiles ?? []).compactMap { $0 as? ICCameraFile }.filter {
-                $0.name == parts[2] && ($0.parentFolder?.name).map { $0 == parts[1] } ?? true
-            })
-        }.value
-        guard let file = matches.first else { throw IPhoneTransferError("Already gone") }
-        guard matches.count == 1 else { throw IPhoneTransferError("\(parts[2]) matches more than one file on the iPhone") }
-        return (camera, file)
+        let files = await MainActor.run { Box(value: (camera.mediaFiles ?? []).compactMap { $0 as? ICCameraFile }) }.value
+        let hits = matchingFiles(name: ref.name, bytes: ref.bytes, in: files.map { (name: $0.name ?? "", bytes: Int64($0.fileSize)) })
+        guard let first = hits.first else { throw IPhoneTransferError("Already gone") }
+        guard hits.count == 1 else { throw IPhoneTransferError("\(ref.name) matches more than one file on the iPhone") }
+        return (camera, files[first])
     }
 
     // MARK: - Opening the camera
@@ -77,28 +73,38 @@ final class ImageCaptureTransfer: NSObject, IPhoneMediaTransfer, ICDeviceBrowser
     private func openCamera(udid: String) async throws -> ICCameraDevice {
         touch()
         await MainActor.run { start() }
-        let key = udid.replacingOccurrences(of: "-", with: "").uppercased()
         var found: ICCameraDevice?
         for _ in 0..<80 where found == nil {
-            found = lock.withLock { cameras.first { ($0.serialNumberString ?? "").replacingOccurrences(of: "-", with: "").uppercased() == key }
+            found = lock.withLock { cameras.first { sameSerial($0.serialNumberString ?? "", udid) }
                 ?? (cameras.count == 1 ? cameras[0] : nil) }
             if found == nil { try await Task.sleep(for: .milliseconds(250)) }
         }
         guard let camera = found else { throw IPhoneTransferError(Self.notFound) }
         let id = ObjectIdentifier(camera)
         if !lock.withLock({ ready.contains(id) }) {
+            // A failure from an earlier try (a locked phone) must not poison this one.
+            lock.withLock { failures[id] = nil }
             let box = Box(value: camera)
             await MainActor.run { box.value.delegate = self; box.value.requestOpenSession() }
-            // Image Capture reads the whole catalogue before it says the camera is ready.
+            // Image Capture reads the whole catalogue before it says the camera is ready. A locked phone says so
+            // and then becomes ready by itself once unlocked, so that is waited out, not treated as a failure.
             for _ in 0..<480 {
-                if let error = lock.withLock({ failures[id] }) { throw describe(error) }
                 if lock.withLock({ ready.contains(id) }) { return camera }
+                if let error = lock.withLock({ failures[id] }), !Self.isLocked(error) { throw describe(error) }
                 try await Task.sleep(for: .milliseconds(250))
             }
-            throw IPhoneTransferError("The iPhone took too long to share its photos. Unlock it and try again.")
+            throw IPhoneTransferError(lock.withLock { failures[id] } != nil
+                ? "Unlock your iPhone and try again." : "The iPhone took too long to share its photos. Unlock it and try again.")
         }
         return camera
     }
+
+    /// Image Capture's "Please unlock …" (-9943) and its access-restriction callback.
+    private static func isLocked(_ error: NSError) -> Bool {
+        error.code == -9943 || error.code == lockedCode
+    }
+
+    private static let lockedCode = -21342
 
     @MainActor private func start() {
         guard browser == nil else { return }
@@ -160,8 +166,10 @@ final class ImageCaptureTransfer: NSObject, IPhoneMediaTransfer, ICDeviceBrowser
     func cameraDevice(_ camera: ICCameraDevice, didReceiveMetadata metadata: [AnyHashable: Any]?, for item: ICCameraItem, error: (any Error)?) {}
     func cameraDeviceDidChangeCapability(_ camera: ICCameraDevice) {}
     func cameraDevice(_ camera: ICCameraDevice, didReceivePTPEvent eventData: Data) {}
-    func cameraDeviceDidRemoveAccessRestriction(_ device: ICDevice) {}
+    func cameraDeviceDidRemoveAccessRestriction(_ device: ICDevice) {
+        lock.withLock { failures[ObjectIdentifier(device)] = nil }
+    }
     func cameraDeviceDidEnableAccessRestriction(_ device: ICDevice) {
-        lock.withLock { failures[ObjectIdentifier(device)] = NSError(domain: ICErrorDomain, code: -21343) }
+        lock.withLock { failures[ObjectIdentifier(device)] = NSError(domain: ICErrorDomain, code: Self.lockedCode) }
     }
 }

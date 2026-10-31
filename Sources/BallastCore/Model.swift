@@ -124,7 +124,7 @@ public enum StepKind: Sendable, Equatable {
     case copyToTerminal(String)
     /// Copies camera-roll files (paths like `/DCIM/110APPLE/IMG_0908.MOV`) from an iPhone into a Mac folder,
     /// checks each copy's size, and deletes a file from the iPhone only once its copy checks out.
-    case moveFromIPhone(udid: String, files: [String], to: URL)
+    case moveFromIPhone(udid: String, files: [IPhoneFileRef], to: URL)
 
     /// What the confirmation sheet shows for this step.
     public var display: String {
@@ -136,7 +136,7 @@ public enum StepKind: Sendable, Equatable {
         case .unloadLoginItem(let label, let plist): "launchctl bootout gui/\(getuid())/\(label)\n\(plist.path)"
         case .copyToTerminal(let command): command
         case .moveFromIPhone(_, let files, let folder):
-            files.map { "\($0) → \(folder.path)" }.joined(separator: "\n")
+            files.map { "\($0.path) → \(folder.path)" }.joined(separator: "\n")
         }
     }
 
