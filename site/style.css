@@ -272,3 +272,4 @@ footer p { max-width: 80ch; }
   html { scroll-behavior: auto; }
   .caret::after { animation: none; }
 }
+@media (max-width: 600px) { .code.has-copy pre { padding-right: 16px; padding-bottom: 48px; } .copy { top: auto; bottom: 8px; } }
