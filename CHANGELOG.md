@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- **Table headers and the Settings window's buttons now match the rest of the app.**
+
 ## 0.5.3 — 2026-11-01
 
 - **The window's title bar now matches the rest of the window in light and dark.**
