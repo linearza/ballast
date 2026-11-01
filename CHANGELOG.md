@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.5.3 — 2026-11-01
 
 - **The window's title bar now matches the rest of the window in light and dark.**
 - **Easier on the eye.** Softer teal and brass colours in both modes, with text kept comfortably readable.
