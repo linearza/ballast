@@ -18,7 +18,7 @@ PATHMAP := -Xswiftc -file-prefix-map -Xswiftc "$(CURDIR)=." \
   -Xcc -ffile-prefix-map=$(HOME)=~ \
   -Xlinker -S
 
-.PHONY: build test app install uninstall release notarize icon screenshots check clean
+.PHONY: build test vendor app install uninstall release notarize icon screenshots check clean
 
 check:
 	@swift --version 2>/dev/null | grep -Eq 'Swift version ([6-9]|[1-9][0-9])\.' || { \
@@ -30,7 +30,13 @@ build: check
 test: check
 	swift test -Xswiftc -plugin-path -Xswiftc "$(TESTING_PLUGINS)"
 
+# The iPhone tools Ballast ships. Best effort here: without cmake and pkg-config the app still builds
+# and looks for the tools on PATH. `make release` insists on them. SKIP_VENDOR=1 skips the step.
+vendor:
+	scripts/vendor-imobiledevice.sh
+
 app: build
+	@if [ -z "$(SKIP_VENDOR)" ]; then scripts/vendor-imobiledevice.sh || echo "warning: building without the iPhone tools; see the message above."; fi
 	BALLAST_REPO="$(REPO)" scripts/bundle.sh "$$(swift build -c release $(PATHMAP) --show-bin-path)/$(APP)" "$(BUNDLE)" "$(VERSION)"
 
 install: app
@@ -49,7 +55,7 @@ uninstall:
 	rm -rf "$(HOME)/Library/Application Support/Ballast"
 	@echo "Ballast removed. It's in the Trash."
 
-release: check
+release: check vendor
 	swift build -c release --arch arm64 --arch x86_64 $(PATHMAP)
 	BALLAST_REPO="$(REPO)" scripts/bundle.sh "$$(swift build -c release --arch arm64 --arch x86_64 $(PATHMAP) --show-bin-path)/$(APP)" "$(BUNDLE)" "$(VERSION)"
 	cd $(DIST) && rm -f $(APP)-$(VERSION).zip && ditto -c -k --keepParent $(APP).app $(APP)-$(VERSION).zip
@@ -62,6 +68,8 @@ release: check
 NOTARY_PROFILE ?= ballast
 notarize: release
 	@test -n "$(DEVELOPER_ID)" || { echo 'Set DEVELOPER_ID="Developer ID Application: Your Name (TEAMID)"'; exit 1; }
+	@# Nested executables first, each with the hardened runtime; --deep alone doesn't reliably reach Contents/Helpers.
+	for tool in "$(BUNDLE)"/Contents/Helpers/*; do codesign --force --options runtime --timestamp -s "$(DEVELOPER_ID)" "$$tool"; done
 	codesign --force --deep --options runtime --timestamp --entitlements Resources/Ballast.entitlements -s "$(DEVELOPER_ID)" "$(BUNDLE)"
 	cd $(DIST) && rm -f $(APP)-$(VERSION).zip && ditto -c -k --keepParent $(APP).app $(APP)-$(VERSION).zip
 	xcrun notarytool submit "$(DIST)/$(APP)-$(VERSION).zip" --keychain-profile "$(NOTARY_PROFILE)" --wait

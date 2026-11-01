@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.5.1
+
+- **The iPhone tools are built in.** Ballast now carries the programs it uses to talk to an iPhone, so there is nothing to install with Homebrew. Unlock the phone and tap Trust, and it shows up. A build from source without them still looks for the tools on your PATH.
+
 ## 0.5.0 — 2026-10-31
 
 - **Connected iPhone:** plug an iPhone in by USB and Ballast shows how its storage is used (photos and videos, apps, iOS, free space) and offers two clean-ups. It needs libimobiledevice (`brew install libimobiledevice ideviceinstaller`), which Ballast never installs; without it, Ballast says so and offers a Copy button for the command.

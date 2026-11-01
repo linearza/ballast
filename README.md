@@ -109,7 +109,7 @@ Ballast asks for nothing up front. It reads your home folder like any app you ru
 - **Full Disk Access** is only needed for protected locations (some app containers and the Docker disk image). Ballast shows those items as locked and explains how to grant access if you want them measured.
 - **Administrator steps,** such as removing Docker's system helpers, are never run for you. Ballast shows the exact `sudo` command for you to run in Terminal.
 - **Finder** is used to empty the Trash, so macOS asks whether Ballast can control Finder the first time you click Empty Trash. If you said no, Ballast offers to open **Privacy & Security → Automation** so you can allow it.
-- **Your iPhone** is read with libimobiledevice, which is optional and only needed for this: `brew install libimobiledevice ideviceinstaller`. Ballast never installs it. The iPhone has to be unlocked and trusted. Moving videos and photos goes through Image Capture, so macOS may ask whether Ballast can open the iPhone's photos the first time; if you said no, Ballast offers to open **Privacy & Security**.
+- **Your iPhone** is read with libimobiledevice, whose tools are built into Ballast, so there is nothing to install. The iPhone has to be unlocked and trusted. Moving videos and photos goes through Image Capture, so macOS may ask whether Ballast can open the iPhone's photos the first time; if you said no, Ballast offers to open **Privacy & Security**.
 - **The network** is used for two things only: a daily check of GitHub for a newer Ballast, and, if you have the GitHub CLI (`gh`) signed in, asking GitHub whether a worktree's pull request is merged.
 
 ## Install
@@ -125,6 +125,8 @@ make install
 ```
 
 This builds Ballast, copies it to `~/Applications` and opens it.
+
+The iPhone tools are built from source on the way, which takes a few minutes the first time and needs `cmake` and `pkg-config` (`brew install cmake pkg-config`). Without them the app still builds and looks for the tools on your PATH instead. `make release` always builds them.
 
 If the build stops at `Invalid manifest` with `Undefined symbols … PackageDescription.Package`, your Swift compiler and its package library come from different versions of the Command Line Tools, usually after a macOS update. Reinstall them and build again:
 
@@ -194,3 +196,7 @@ The scanning and cleanup logic lives in `Sources/BallastCore` and is tested agai
 ## Licence
 
 MIT
+
+### Third-party software
+
+The release download carries four command-line tools in `Ballast.app/Contents/Helpers` (`idevice_id`, `ideviceinfo`, `ideviceinstaller`, `afcclient`) to talk to an iPhone. They are built unmodified from the upstream libimobiledevice projects (libimobiledevice, libplist, libusbmuxd, libimobiledevice-glue, libtatsu and ideviceinstaller, under LGPL-2.1 or GPL-2), with libzip (BSD-3-Clause) and OpenSSL (Apache-2.0). Ballast runs them as separate programs and only talks to them through their command lines. The licence texts and a written offer of the source are in `Ballast.app/Contents/Resources/ThirdPartyNotices.txt`, and `scripts/vendor-imobiledevice.sh` builds them from the exact upstream tarballs, pinned by checksum.
