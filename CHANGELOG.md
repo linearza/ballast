@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+- **The window's title bar now matches the rest of the window in light and dark.**
+- **Easier on the eye.** Softer teal and brass colours in both modes, with text kept comfortably readable.
+- **Anything that removes, deletes, uninstalls or empties is now red.** Brass is kept for everything else. The small buttons in the menu bar popover and the sidebar are more compact.
+- **Tidier "Safe to reclaim" page.** The section headers match the rest of the window and line up with the rows below them.
+
 ## 0.5.2 — 2026-11-01
 
 - **A new look.** Ballast now wears the same teal and brass colours as its website, in light and dark mode, following your Mac's appearance. Sizes and paths are set in a monospaced font, headline totals are brass, risk levels (Regenerable, Review, Your data) are coloured tags, and the "Read this first" warning on the confirm sheet stands out more. What Ballast finds and how it removes things hasn't changed.

@@ -100,7 +100,7 @@ struct Sidebar: View {
             HStack {
                 Text("\(formatBytes(model.free)) free").font(.caption).foregroundStyle(Theme.muted)
                 Spacer()
-                Button("Scan all") { Task { await model.scanNow() } }.buttonStyle(LineButtonStyle()).disabled(model.scanning)
+                Button("Scan all") { Task { await model.scanNow() } }.buttonStyle(LineButtonStyle()).controlSize(.small).disabled(model.scanning)
             }
             .padding(10)
             .background(Theme.bg2)

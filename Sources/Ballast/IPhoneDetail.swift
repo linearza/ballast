@@ -133,10 +133,10 @@ struct IPhoneDetail: View {
         default: "Review \(chosen.count) items… · \(size)"
         }
         return HStack {
-            Button("Select none") { model.checked[Self.id] = [] }.buttonStyle(LineButtonStyle()).disabled(chosen.isEmpty)
+            Button("Select none") { model.checked[Self.id] = [] }.buttonStyle(LineButtonStyle()).controlSize(.small).disabled(chosen.isEmpty)
             Spacer()
             Button(label) { Task { await model.prepare(concern: Self.id, ids: chosen.map(\.id)) } }
-                .buttonStyle(BrassButtonStyle())
+                .buttonStyle(DangerButtonStyle())
                 .keyboardShortcut(.defaultAction)
                 .disabled(chosen.isEmpty)
         }

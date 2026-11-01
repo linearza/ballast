@@ -15,29 +15,31 @@ enum Theme {
         })
     }
 
-    static let bg = dynamic("bg", dark: hex(0x061418), light: hex(0xF2F7F7))
-    static let bg2 = dynamic("bg2", dark: hex(0x0A1E24), light: hex(0xFFFFFF))
-    static let bg3 = dynamic("bg3", dark: hex(0x10303A), light: hex(0xE4EEF0))
-    static let line = dynamic("line", dark: hex(0x1F3F48), light: hex(0xC9D9DC))
-    static let text = dynamic("text", dark: hex(0xE9F2F3), light: hex(0x08262D))
-    static let muted = dynamic("muted", dark: hex(0x93AEB3), light: hex(0x46636A))
+    static let bg = dynamic("bg", dark: hex(0x0C1F24), light: hex(0xEEF4F4))
+    static let bg2 = dynamic("bg2", dark: hex(0x10262C), light: hex(0xF7FAFA))
+    static let bg3 = dynamic("bg3", dark: hex(0x173540), light: hex(0xE3EDEE))
+    static let line = dynamic("line", dark: hex(0x1F3A42), light: hex(0xD3E0E2))
+    static let text = dynamic("text", dark: hex(0xD6E3E5), light: hex(0x1D3A40))
+    static let muted = dynamic("muted", dark: hex(0x8BA6AB), light: hex(0x4D666C))
     /// Brass as text: the headline totals.
-    static let accent = dynamic("accent", dark: hex(0xE3B04B), light: hex(0x7D5200))
+    static let accent = dynamic("accent", dark: hex(0xD4A849), light: hex(0x7D5200))
     /// Brass as a surface: buttons, toggles, progress.
-    static let ctaBg = dynamic("ctaBg", dark: hex(0xE3B04B), light: hex(0xDBA43C))
+    static let ctaBg = dynamic("ctaBg", dark: hex(0xD4A849), light: hex(0xDBA43C))
     static let ctaText = dynamic("ctaText", dark: hex(0x1A1204), light: hex(0x1A1204))
-    static let ok = dynamic("ok", dark: hex(0x4FD19A), light: hex(0x0B7A4D))
-    static let review = dynamic("review", dark: hex(0xFF9A5C), light: hex(0xA84A0B))
-    static let danger = dynamic("danger", dark: hex(0xFF6B6B), light: hex(0xB42318))
-    static let tintOK = dynamic("tintOK", dark: hex(0x4FD19A, 0.12), light: hex(0x0B7A4D, 0.10))
-    static let tintReview = dynamic("tintReview", dark: hex(0xFF9A5C, 0.13), light: hex(0xA84A0B, 0.10))
-    static let tintNeutral = dynamic("tintNeutral", dark: hex(0x93AEB3, 0.16), light: hex(0x46636A, 0.12))
-    static let dangerBg = dynamic("dangerBg", dark: hex(0xFF6B6B, 0.10), light: hex(0xB42318, 0.07))
-    static let dangerLine = dynamic("dangerLine", dark: hex(0xFF6B6B, 0.40), light: hex(0xB42318, 0.35))
+    static let ok = dynamic("ok", dark: hex(0x5FBF9A), light: hex(0x0B7A4D))
+    static let review = dynamic("review", dark: hex(0xE89A66), light: hex(0xA84A0B))
+    static let danger = dynamic("danger", dark: hex(0xE87878), light: hex(0xB42318))
+    static let tintOK = dynamic("tintOK", dark: hex(0x5FBF9A, 0.10), light: hex(0x0B7A4D, 0.10))
+    static let tintReview = dynamic("tintReview", dark: hex(0xE89A66, 0.11), light: hex(0xA84A0B, 0.10))
+    static let tintNeutral = dynamic("tintNeutral", dark: hex(0x8BA6AB, 0.14), light: hex(0x46636A, 0.12))
+    static let dangerBg = dynamic("dangerBg", dark: hex(0xE87878, 0.09), light: hex(0xB42318, 0.07))
+    static let dangerLine = dynamic("dangerLine", dark: hex(0xE87878, 0.38), light: hex(0xB42318, 0.35))
     /// Sidebar selection: a step up from the sidebar surface.
     static let selection = bg3
     /// Text on a danger-filled button.
-    static let onDanger = dynamic("onDanger", dark: hex(0x1A0606), light: hex(0xFFFFFF))
+    static let onDanger = dynamic("onDanger", dark: hex(0xFDECEB), light: hex(0xFFFFFF))
+    /// Solid fill for a destructive commit button (light text on it).
+    static let dangerFill = dynamic("dangerFill", dark: hex(0xB8423A), light: hex(0xB42318))
 
     /// Sizes and paths, like the site's ledger.
     static func mono(_ style: Font.TextStyle = .body) -> Font { .system(style, design: .monospaced) }
@@ -77,17 +79,44 @@ struct Tag: View {
     }
 }
 
-/// Brass fill with dark text: Remove, Review and remove…, Continue.
+/// Metrics shared by the button styles: regular, or compact when the button says `.controlSize(.small)`
+/// (inline row actions and the popover). Compact buttons are 24pt tall so neighbours line up.
+private struct ButtonMetrics {
+    let small: Bool
+    var radius: CGFloat { small ? 6 : 7 }
+    var hPad: CGFloat { small ? 10 : 12 }
+    func font(bold: Bool) -> Font { small ? .callout.weight(.medium) : (bold ? .body.weight(.semibold) : .body) }
+    func frame<V: View>(_ v: V) -> some View {
+        v.padding(.horizontal, hPad).padding(.vertical, small ? 0 : 4).frame(minHeight: small ? 24 : nil)
+    }
+}
+
+/// Brass fill with dark text: non-destructive primary actions (Open Ballast, Scan, Continue, Close).
 struct BrassButtonStyle: ButtonStyle {
     @SwiftUI.Environment(\.isEnabled) private var isEnabled
-    var danger = false
+    @SwiftUI.Environment(\.controlSize) private var size
 
     func makeBody(configuration: Configuration) -> some View {
-        configuration.label
-            .font(.body.weight(.semibold))
-            .foregroundStyle(danger ? Theme.onDanger : Theme.ctaText)
-            .padding(.horizontal, 12).padding(.vertical, 4)
-            .background(RoundedRectangle(cornerRadius: 7).fill(danger ? Theme.danger : Theme.ctaBg))
+        let m = ButtonMetrics(small: size == .small)
+        m.frame(configuration.label.font(m.font(bold: true)).foregroundStyle(Theme.ctaText))
+            .background(RoundedRectangle(cornerRadius: m.radius).fill(Theme.ctaBg))
+            .opacity(isEnabled ? (configuration.isPressed ? 0.8 : 1) : 0.4)
+    }
+}
+
+/// Red buttons for anything that removes, deletes or moves things off a device.
+/// Solid with light text commits the action; `outline` only opens a confirmation or is an inline row action.
+struct DangerButtonStyle: ButtonStyle {
+    @SwiftUI.Environment(\.isEnabled) private var isEnabled
+    @SwiftUI.Environment(\.controlSize) private var size
+    var outline = false
+
+    func makeBody(configuration: Configuration) -> some View {
+        let m = ButtonMetrics(small: size == .small)
+        m.frame(configuration.label.font(outline ? (m.small ? m.font(bold: false) : .callout) : m.font(bold: true))
+            .foregroundStyle(outline ? Theme.danger : Theme.onDanger))
+            .background(RoundedRectangle(cornerRadius: m.radius).fill(outline ? (configuration.isPressed ? Theme.dangerBg : Color.clear) : Theme.dangerFill))
+            .overlay(RoundedRectangle(cornerRadius: m.radius).strokeBorder(outline ? Theme.dangerLine : Color.clear))
             .opacity(isEnabled ? (configuration.isPressed ? 0.8 : 1) : 0.4)
     }
 }
@@ -95,13 +124,13 @@ struct BrassButtonStyle: ButtonStyle {
 /// Quiet bordered button on teal: secondary actions.
 struct LineButtonStyle: ButtonStyle {
     @SwiftUI.Environment(\.isEnabled) private var isEnabled
+    @SwiftUI.Environment(\.controlSize) private var size
 
     func makeBody(configuration: Configuration) -> some View {
-        configuration.label
-            .foregroundStyle(Theme.text)
-            .padding(.horizontal, 10).padding(.vertical, 3)
-            .background(RoundedRectangle(cornerRadius: 7).fill(configuration.isPressed ? Theme.bg3 : Theme.bg2))
-            .overlay(RoundedRectangle(cornerRadius: 7).strokeBorder(Theme.line))
+        let m = ButtonMetrics(small: size == .small)
+        m.frame(configuration.label.font(m.font(bold: false)).foregroundStyle(Theme.text))
+            .background(RoundedRectangle(cornerRadius: m.radius).fill(configuration.isPressed ? Theme.bg3 : Theme.bg2))
+            .overlay(RoundedRectangle(cornerRadius: m.radius).strokeBorder(Theme.line))
             .opacity(isEnabled ? 1 : 0.45)
     }
 }
@@ -121,4 +150,33 @@ extension View {
 /// A 1pt rule in `line`, in place of the system Divider.
 struct Rule: View {
     var body: some View { Theme.line.frame(height: 1) }
+}
+
+/// SwiftUI's Table draws its column-header strip in system grey; this reaches the underlying NSTableView and
+/// paints the strip in the theme colour instead.
+struct TableHeaderSkin: NSViewRepresentable {
+    func makeNSView(context: Context) -> NSView { NSView() }
+
+    func updateNSView(_ view: NSView, context: Context) {
+        DispatchQueue.main.async {
+            guard let root = view.window?.contentView else { return }
+            Self.skin(in: root)
+        }
+    }
+
+    private static func skin(in v: NSView) {
+        if let table = v as? NSTableView {
+            table.backgroundColor = .clear
+            if let header = table.headerView {
+                // Resolve the dynamic colour for this window's appearance, not whatever happens to be current.
+                var cg = NSColor(Theme.bg2).cgColor
+                header.effectiveAppearance.performAsCurrentDrawingAppearance { cg = NSColor(Theme.bg2).cgColor }
+                header.wantsLayer = true
+                header.layer?.backgroundColor = cg
+                header.superview?.wantsLayer = true
+                header.superview?.layer?.backgroundColor = cg
+            }
+        }
+        for s in v.subviews { skin(in: s) }
+    }
 }
