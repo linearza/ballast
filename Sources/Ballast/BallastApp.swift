@@ -1,7 +1,18 @@
 import BallastCore
 import SwiftUI
 
+/// Entry point. `BALLAST_SELFUPDATE_TEST=<bundle>` runs the installer against that bundle and exits, with no app and no window.
 @main
+enum Launcher {
+    static func main() {
+        if let target = SelfUpdateTestHook.target {
+            Task.detached { exit(await SelfUpdateTestHook.run(target)) }
+            dispatchMain()
+        }
+        BallastApp.main()
+    }
+}
+
 struct BallastApp: App {
     // Not @State: the Command Line Tools lack the SwiftUI macro plugin it needs on the macOS 27 SDK.
     private let model = AppModel.shared

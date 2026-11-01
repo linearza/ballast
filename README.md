@@ -133,7 +133,7 @@ Ballast asks for nothing up front. It reads your home folder like any app you ru
 - **Administrator steps,** such as removing Docker's system helpers, are never run for you. Ballast shows the exact `sudo` command for you to run in Terminal.
 - **Finder** is used to empty the Trash, so macOS asks whether Ballast can control Finder the first time you click Empty Trash. If you said no, Ballast offers to open **Privacy & Security → Automation** so you can allow it.
 - **Your iPhone** is read with libimobiledevice, whose tools are built into Ballast, so there is nothing to install. The iPhone has to be unlocked and trusted. Moving videos and photos goes through Image Capture, so macOS may ask whether Ballast can open the iPhone's photos the first time; if you said no, Ballast offers to open **Privacy & Security**.
-- **The network** is used for two things only: a daily check of GitHub for a newer Ballast, and, if you have the GitHub CLI (`gh`) signed in, asking GitHub whether a worktree's pull request is merged.
+- **The network** is used for two things only: a daily check of GitHub for a newer Ballast (plus downloading it when you press *Update*), and, if you have the GitHub CLI (`gh`) signed in, asking GitHub whether a worktree's pull request is merged.
 
 ## Install
 
@@ -170,7 +170,9 @@ Ballast is not notarised, so macOS blocks it the first time. Either open **Syste
 xattr -dr com.apple.quarantine ~/Applications/Ballast.app
 ```
 
-Ballast checks GitHub once a day for a newer release. When there is one, it sends a notification and shows a link in the menu. It never updates itself, and it stays silent in quiet mode.
+Ballast checks GitHub once a day for a newer release. When there is one, it sends a notification and shows *Update to x.y.z* in the menu and in Settings, beside a *What's new* link. *Check for updates* in Settings and the gear menu looks right away. It stays silent in quiet mode.
+
+*Update to x.y.z* downloads the release's zip from GitHub (only `github.com` and GitHub's release-asset hosts, over https), unzips it, and checks that it is Ballast, is the version offered, is newer than the one running, and passes `codesign --verify`. Then it swaps it in for the running copy (the old one goes to the Trash) and relaunches. Any failed check leaves your current copy untouched. It won't start while a clean-up is running, and it never asks for your password: if the folder Ballast lives in isn't writable, it says so and you download the release yourself. Updates are logged in `actions.log`.
 
 ## First run
 

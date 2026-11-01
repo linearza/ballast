@@ -44,9 +44,7 @@ struct Popover: View {
             Rule()
             trash
             Rule()
-            if let update = model.updates.available {
-                Link("Ballast \(update.version) is out", destination: update.url).font(.callout).foregroundStyle(Theme.accent).foregroundStyle(Theme.accent)
-            }
+            if UpdateRow.visible(model.updates) { UpdateRow(model: model) }
             footer
         }
         .padding(14)
@@ -155,6 +153,8 @@ struct Popover: View {
             Menu {
                 Text("Ballast \(model.updates.current)")  // disabled: it only says which version this is
                 Divider()
+                Button(model.updates.phase == .checking ? "Checking…" : "Check for updates") { Task { await model.updates.checkNow() } }
+                    .disabled(model.updates.phase.busy)
                 Button("Settings…") { Windows.shared.showSettings(model) }
                 Button("Go Quiet…") { goQuiet(model) }
                 Rule()
