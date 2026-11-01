@@ -49,12 +49,12 @@ import SwiftUI
             model.checked = [IPhoneDetail.id: [mediaID("/DCIM/109APPLE/IMG_0908.MOV"), mediaID("/DCIM/109APPLE/IMG_9758.MOV"), appID("com.example.streaming")]]
             let phone = await render(MainWindowRoot(model: model), size: NSSize(width: 980, height: 880), title: "Ballast", dark: dark)
             save(frame(phone), dir.appending(path: "iphone\(suffix).png"))
-            model.reports.removeAll { $0.id == IPhoneDetail.id }
-            model.iphone = nil
             model.checked = [:]
 
             let popover = await render(Popover(model: model), size: NSSize(width: 320, height: 420), title: nil, dark: dark, fit: true)
             save(frame(popover), dir.appending(path: "menu\(suffix).png"))
+            model.reports.removeAll { $0.id == IPhoneDetail.id }
+            model.iphone = nil
 
             let settings = await render(SettingsView(model: model), size: NSSize(width: 520, height: 560), title: "Ballast Settings", dark: dark, fit: true)
             save(frame(settings), dir.appending(path: "settings\(suffix).png"))

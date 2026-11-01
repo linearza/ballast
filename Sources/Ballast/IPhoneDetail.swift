@@ -141,9 +141,10 @@ struct IPhoneDetail: View {
     }
 }
 
-/// A stacked bar of how the iPhone's storage is used, a legend, and what the bar can't tell.
-struct StorageSummary: View {
+/// The stacked bar of how an iPhone's storage is used, shared by the detail view and the menu.
+struct StorageBar: View {
     let storage: IPhoneStorage
+    var height: CGFloat = 16
 
     static func color(_ part: IPhoneStorage.Part) -> Color {
         switch part {
@@ -158,21 +159,33 @@ struct StorageSummary: View {
     var body: some View {
         let parts = storage.parts
         let total = max(1, parts.reduce(0) { $0 + $1.bytes })
-        return VStack(alignment: .leading, spacing: 8) {
-            GeometryReader { geo in
-                HStack(spacing: 1) {
-                    ForEach(parts, id: \.part) { p in
-                        Rectangle().fill(Self.color(p.part)).frame(width: max(0, geo.size.width * Double(p.bytes) / Double(total)))
-                    }
+        let radius = height / 3
+        let gaps = Double(max(0, parts.count - 1))  // the 1pt gaps between segments come out of the width
+        return GeometryReader { geo in
+            HStack(spacing: 1) {
+                ForEach(parts, id: \.part) { p in
+                    Rectangle().fill(Self.color(p.part)).frame(width: max(0, (geo.size.width - gaps) * Double(p.bytes) / Double(total)))
                 }
-                .clipShape(RoundedRectangle(cornerRadius: 5))
-                .overlay(RoundedRectangle(cornerRadius: 5).strokeBorder(Color.secondary.opacity(0.3)))
             }
-            .frame(height: 16)
+            .clipShape(RoundedRectangle(cornerRadius: radius))
+            .overlay(RoundedRectangle(cornerRadius: radius).strokeBorder(Color.secondary.opacity(0.3)))
+        }
+        .frame(height: height)
+    }
+}
+
+/// A stacked bar of how the iPhone's storage is used, a legend, and what the bar can't tell.
+struct StorageSummary: View {
+    let storage: IPhoneStorage
+
+    var body: some View {
+        let parts = storage.parts
+        return VStack(alignment: .leading, spacing: 8) {
+            StorageBar(storage: storage)
             HStack(spacing: 16) {
                 ForEach(parts, id: \.part) { p in
                     HStack(spacing: 5) {
-                        Circle().fill(Self.color(p.part)).overlay(Circle().strokeBorder(Color.secondary.opacity(0.4))).frame(width: 9, height: 9)
+                        Circle().fill(StorageBar.color(p.part)).overlay(Circle().strokeBorder(Color.secondary.opacity(0.4))).frame(width: 9, height: 9)
                         Text(p.part.rawValue)
                         Text(formatBytes(p.bytes)).monospacedDigit().foregroundStyle(.secondary)
                     }

@@ -34,19 +34,9 @@ struct Popover: View {
             } else {
                 Text(model.scanning ? "Scanning your disk…" : "No scan yet.").foregroundStyle(.secondary)
             }
-            if let phone = model.iphone, let storage = phone.storage {
+            if let phone = model.iphone, let block = iphoneBlock(phone) {
                 Divider()
-                Button { open(IPhoneDetail.id) } label: {
-                    HStack {
-                        Image(systemName: "iphone").frame(width: 20)
-                        Text("iPhone: \(formatBytes(storage.free)) free")
-                        Spacer()
-                        Image(systemName: "chevron.right").foregroundStyle(.secondary)
-                    }
-                    .contentShape(Rectangle())
-                }
-                .buttonStyle(.plain)
-                .help("See what's using \(phone.name)'s storage")
+                block
             }
             Divider()
             trash
@@ -78,6 +68,59 @@ struct Popover: View {
         }
     }
 
+    /// A connected iPhone as a name, a thin storage bar and one line on what fills it. Nil when there is nothing to show.
+    func iphoneBlock(_ phone: IPhoneSnapshot) -> AnyView? {
+        let help = "See what's using \(phone.name)'s storage"
+        switch phone.state {
+        case .locked:
+            return AnyView(Button { open(IPhoneDetail.id) } label: {
+                VStack(alignment: .leading, spacing: 4) {
+                    HStack {
+                        Image(systemName: "iphone").frame(width: 20)
+                        Text(phone.name)
+                        Spacer()
+                        Image(systemName: "chevron.right").foregroundStyle(.secondary)
+                    }
+                    Text("Unlock it and tap Trust").font(.caption).foregroundStyle(.secondary).padding(.leading, 28)
+                }
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .help(help))
+        default:
+            guard let storage = phone.storage else { return nil }
+            return AnyView(Button { open(IPhoneDetail.id) } label: {
+                VStack(alignment: .leading, spacing: 4) {
+                    HStack {
+                        Image(systemName: "iphone").frame(width: 20)
+                        Text(phone.name).lineLimit(1)
+                        Spacer()
+                        Text("\(formatBytes(storage.free)) free").monospacedDigit().foregroundStyle(.secondary)
+                        Image(systemName: "chevron.right").foregroundStyle(.secondary)
+                    }
+                    StorageBar(storage: storage, height: 6).padding(.leading, 28)
+                    iphoneCaption(storage, videos: phone.media.videoBytes).padding(.leading, 28)
+                }
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .help(help))
+        }
+    }
+
+    /// One line, longest first; the first version that fits whole is shown, so nothing is cut mid-word.
+    func iphoneCaption(_ storage: IPhoneStorage, videos: Int64) -> some View {
+        let photos = "Photos and videos \(formatBytes(storage.photos))"
+        let apps = "Apps \(formatBytes(storage.apps))"
+        let move = "\(formatBytes(videos)) of videos to move"
+        let options = videos > 0 ? ["\(photos) · \(apps) · \(move)", "\(apps) · \(move)", move, photos] : ["\(photos) · \(apps)", photos]
+        return ViewThatFits(in: .horizontal) {
+            ForEach(options, id: \.self) { Text($0).lineLimit(1).fixedSize(horizontal: true, vertical: false) }
+        }
+        .font(.caption).foregroundStyle(.secondary)
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
     var trash: some View {
         HStack {
             Image(systemName: "trash").frame(width: 20)
@@ -98,6 +141,8 @@ struct Popover: View {
             Button("Scan now") { Task { await model.scanNow() } }.disabled(model.scanning)
             Button("Open Ballast") { open(nil) }
             Menu {
+                Text("Ballast \(model.updates.current)")  // disabled: it only says which version this is
+                Divider()
                 Button("Settings…") { Windows.shared.showSettings(model) }
                 Button("Go Quiet…") { goQuiet(model) }
                 Divider()
