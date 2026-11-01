@@ -41,7 +41,9 @@ struct SettingsView: View {
                     Text(iphoneFolderLabel)
                     Spacer()
                     Button("Choose…") { if let url = chooseFolder() { prefs.iphoneFolder = url.path } }
+                        .buttonStyle(LineButtonStyle()).controlSize(.small)
                     Button("Reset") { prefs.iphoneFolder = "" }.disabled(prefs.iphoneFolder.isEmpty)
+                        .buttonStyle(LineButtonStyle()).controlSize(.small)
                 }
                 Text("Videos and photos moved off a connected iPhone are copied here, into a folder named after the iPhone.")
                     .font(.caption).foregroundStyle(.secondary)
@@ -109,13 +111,15 @@ struct RootsEditor: View {
                     Image(systemName: "folder")
                     Text(path.replacingOccurrences(of: NSHomeDirectory(), with: "~"))
                     Spacer()
-                    Button { roots.wrappedValue.removeAll { $0 == path } } label: { Image(systemName: "minus.circle") }
-                        .buttonStyle(.borderless)
+                    Button { roots.wrappedValue.removeAll { $0 == path } } label: { Text("Remove") }
+                        .buttonStyle(DangerButtonStyle(outline: true)).controlSize(.small)
+                        .accessibilityLabel("Remove \(path)")
                 }
             }
             Button("Add folder…") {
                 if let url = chooseFolder(), !roots.wrappedValue.contains(url.path) { roots.wrappedValue.append(url.path) }
             }
+            .buttonStyle(LineButtonStyle()).controlSize(.small)
         }
     }
 }
@@ -165,6 +169,7 @@ struct FirstRunSheet: View {
                         choice.ticked.insert(url.path)
                     }
                 }
+                .buttonStyle(LineButtonStyle())
                 Spacer()
                 Button("Continue") {
                     Task { await model.confirmRoots(choice.found.filter { choice.ticked.contains($0) }) }

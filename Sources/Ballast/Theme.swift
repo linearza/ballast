@@ -167,16 +167,48 @@ struct TableHeaderSkin: NSViewRepresentable {
     private static func skin(in v: NSView) {
         if let table = v as? NSTableView {
             table.backgroundColor = .clear
-            if let header = table.headerView {
-                // Resolve the dynamic colour for this window's appearance, not whatever happens to be current.
-                var cg = NSColor(Theme.bg2).cgColor
-                header.effectiveAppearance.performAsCurrentDrawingAppearance { cg = NSColor(Theme.bg2).cgColor }
-                header.wantsLayer = true
-                header.layer?.backgroundColor = cg
-                header.superview?.wantsLayer = true
-                header.superview?.layer?.backgroundColor = cg
+            if let old = table.headerView, !(old is ThemedHeaderView) {
+                let h = ThemedHeaderView(frame: old.frame)
+                table.headerView = h
             }
         }
         for s in v.subviews { skin(in: s) }
+    }
+}
+
+/// Column-header strip drawn entirely from the theme: bg-2 fill, muted text, subtle separators, a `line` hairline below.
+/// Replaces the native NSTableHeaderView, whose own material overlay reads lighter and bluer than the teal.
+final class ThemedHeaderView: NSTableHeaderView {
+    override var isOpaque: Bool { false }
+
+    override func draw(_ dirtyRect: NSRect) {
+        guard let table = tableView else { return }
+        func resolve(_ c: Color) -> NSColor {
+            var out = NSColor(c)
+            effectiveAppearance.performAsCurrentDrawingAppearance { out = NSColor(cgColor: NSColor(c).cgColor) ?? out }
+            return out
+        }
+        resolve(Theme.bg2).setFill()
+        bounds.fill()
+        let para = NSMutableParagraphStyle()
+        para.lineBreakMode = .byTruncatingTail
+        let attrs: [NSAttributedString.Key: Any] = [
+            .font: NSFont.systemFont(ofSize: NSFont.smallSystemFontSize, weight: .medium),
+            .foregroundColor: resolve(Theme.muted),
+            .paragraphStyle: para,
+        ]
+        let line = resolve(Theme.line)
+        for i in 0..<table.numberOfColumns {
+            let r = headerRect(ofColumn: i)
+            let title = table.tableColumns[i].title as NSString
+            let size = title.size(withAttributes: attrs)
+            title.draw(in: NSRect(x: r.minX + 8, y: r.midY - size.height / 2, width: max(0, r.width - 16), height: size.height), withAttributes: attrs)
+            if i < table.numberOfColumns - 1 {
+                line.withAlphaComponent(0.7).setFill()
+                NSRect(x: r.maxX - 1, y: r.minY + 5, width: 1, height: r.height - 10).fill()
+            }
+        }
+        line.setFill()
+        NSRect(x: 0, y: bounds.maxY - 1, width: bounds.width, height: 1).fill()
     }
 }
