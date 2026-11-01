@@ -1,12 +1,11 @@
 # Changelog
 
-## 0.5.1
+## 0.5.1 — 2026-11-01
 
 - **The iPhone tools are built in.** Ballast now carries the programs it uses to talk to an iPhone, so there is nothing to install with Homebrew. Unlock the phone and tap Trust, and it shows up. A build from source without them still looks for the tools on your PATH.
 - **Only one Ballast runs at a time.** Opening a second copy brings up the first one's window instead, and opening a newer version replaces the older one (unless it is in the middle of a clean-up, in which case the older one carries on).
 - Plugging in an iPhone shows it right away; unplugging it removes it.
 - The menu shows a connected iPhone's name, a storage bar and what's using it. The gear menu now says which version of Ballast you have.
-
 
 ## 0.5.0 — 2026-10-31
 

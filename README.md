@@ -33,12 +33,12 @@ Old Ruby and Node versions, `node_modules` in projects you forgot about, simulat
 | **AI models** | Ollama, Hugging Face, Whisper, LM Studio, GPT4All, Jan, llama.cpp, DiffusionBee and PyTorch Hub models |
 | **AI tools and editors** | Caches and old workspace data of Cursor, VS Code, Windsurf and the Claude app, old Claude Code versions, and Claude Code history for projects that no longer exist |
 | **Apps** | Your apps with their size and when you last opened them, removed together with their leftovers and background helpers |
-| **Connected iPhone** | What's using an iPhone's storage over USB, its biggest videos and photos (moved to your Mac before they're deleted from the phone) and its apps (uninstalled with their data). Needs libimobiledevice |
+| **Connected iPhone** | What's using an iPhone's storage over USB, its biggest videos and photos (moved to your Mac before they're deleted from the phone) and its apps (uninstalled with their data). It shows up as soon as you plug the phone in |
 | **Large personal files** | The biggest files in your home folder, only when you ask, with files in iCloud Drive marked |
 
 ## A quick tour
 
-The menu bar icon shows free space at a glance. Click it for a summary of the biggest concerns and what's safe to reclaim, or open the main window to review and remove things.
+The menu bar icon shows free space at a glance. Click it for a summary of the biggest concerns and what's safe to reclaim, plus a connected iPhone's storage, or open the main window to review and remove things. Only one copy of Ballast runs at a time: opening it again brings up the window of the one already running.
 
 <p align="center">
 <picture>
