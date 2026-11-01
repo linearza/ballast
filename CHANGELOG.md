@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.5.4 — 2026-11-01
 
 - **Table headers and the Settings window's buttons now match the rest of the app.**
 
