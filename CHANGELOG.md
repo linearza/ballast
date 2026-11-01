@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.5.2 — 2026-11-01
 
 - **A new look.** Ballast now wears the same teal and brass colours as its website, in light and dark mode, following your Mac's appearance. Sizes and paths are set in a monospaced font, headline totals are brass, risk levels (Regenerable, Review, Your data) are coloured tags, and the "Read this first" warning on the confirm sheet stands out more. What Ballast finds and how it removes things hasn't changed.
 
