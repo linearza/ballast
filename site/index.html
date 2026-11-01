@@ -43,7 +43,7 @@
   <div class="wrap">
     <div>
       <h1>Get your disk space back without breaking a project.</h1>
-      <p class="lede">Old Ruby versions, idle <code>node_modules</code>, simulator runtimes, Docker cache, models you tried once. Ballast finds them, knows what's still in use, and shows every step before it does anything.</p>
+      <p class="lede">Old Ruby versions, idle <code>node_modules</code>, simulator runtimes, Docker cache, models you tried once. Ballast finds them, checks what's still in use, and shows every step before it runs anything.</p>
       <div class="cta-row">
         <a class="btn primary" href="https://github.com/linearza/ballast/releases/latest">Download for macOS</a>
         <a class="btn" href="https://github.com/linearza/ballast">View on GitHub</a>
@@ -65,7 +65,6 @@
         <span class="num" id="ledger-num">28.55 GB</span>
         <span class="rest">plus 22.42 GB that needs a look first</span>
       </div>
-      <figcaption class="ledger-note">A sample scan with made-up sizes, like the screenshots below.</figcaption>
     </figure>
   </div>
 </section>
@@ -73,12 +72,12 @@
 <section id="in-use">
   <div class="wrap">
     <h2>It knows what's still in use.</h2>
-    <p class="lede">Most cleaners see a big folder. Ballast reads your projects, your worktrees and your running processes first, then labels what it finds the way you'd want it labelled.</p>
+    <p class="lede">Ballast reads your projects, worktrees and running processes before it labels anything.</p>
 
     <div class="cards">
       <article class="card">
         <h3>A Ruby a project pins</h3>
-        <p>Ballast reads <code>.ruby-version</code>, <code>.nvmrc</code>, <code>.tool-versions</code> and <code>mise.toml</code> from your project folders.</p>
+        <p>Read from <code>.ruby-version</code>, <code>.nvmrc</code>, <code>.tool-versions</code> and <code>mise.toml</code> in your project folders.</p>
         <div class="item">
           <div class="meta"><span class="name">Ruby 3.2.2</span><span>1.24 GB</span></div>
           <span class="sub">~/.rvm/rubies/ruby-3.2.2</span>
@@ -89,18 +88,18 @@
 
       <article class="card">
         <h3>A worktree with unpushed commits</h3>
-        <p>A worktree is only done with when its pull request is merged and nothing is left uncommitted or unpushed.</p>
+        <p>A worktree is done when its PR is merged and nothing is left uncommitted or unpushed.</p>
         <div class="item">
           <div class="meta"><span class="name">billing-api worktree retry-webhooks</span><span>640 MB</span></div>
           <span class="sub">~/Code/billing-api-wt/retry-webhooks</span>
           <div class="tags"><span class="tag warn">2 unpushed</span><span class="tag">merged PR</span><span class="tag review">Review</span></div>
         </div>
-        <p class="outcome"><strong>Marked Review, not safe.</strong> With uncommitted changes, Ballast refuses it outright.</p>
+        <p class="outcome"><strong>Marked Review, not safe.</strong> If anything is uncommitted, it refuses outright.</p>
       </article>
 
       <article class="card">
         <h3>A database that's running</h3>
-        <p>Postgres, MySQL and Redis from Homebrew, Postgres.app and DBngin are checked just before anything happens.</p>
+        <p>Postgres, MySQL and Redis from Homebrew, Postgres.app and DBngin are checked right before anything runs.</p>
         <div class="item">
           <div class="meta"><span class="name">Postgres 16</span><span>2.4 GB</span></div>
           <span class="sub">~/Library/Application Support/Postgres/var-16</span>
@@ -115,7 +114,7 @@
 <section id="safety">
   <div class="wrap">
     <h2>Every step, before it happens.</h2>
-    <p class="lede">You tick items, then see each path Ballast will move and each command it will run. This is the sheet, with the real commands. Tick the box to see the Remove button wake up.</p>
+    <p class="lede">Tick items and you get each path it will move and each command it will run. Remove stays off until you tick <b>I understand</b>.</p>
 
     <div class="split">
       <div class="sheet" role="group" aria-label="Example confirmation sheet">
@@ -146,7 +145,6 @@
           <span class="btn">Cancel</span>
           <span class="btn remove">Remove · 4.83 GB</span>
         </div>
-        <p class="sheet-hint">Illustration of the sheet. The real one is in the app.</p>
       </div>
 
       <div>
@@ -175,7 +173,7 @@
 <section id="tour">
   <div class="wrap">
     <h2>See what it sees.</h2>
-    <p class="lede">The menu bar icon shows free space at a glance. Open the main window to review and remove things a group at a time.</p>
+    <p class="lede">The menu bar shows free space. The main window is where you review and remove, one group at a time.</p>
 
     <div class="tabs" role="tablist" aria-label="Product tour" id="tour-tabs" hidden>
       <button class="tab" role="tab" id="t-safe" aria-controls="p-safe" aria-selected="true">Safe to reclaim</button>
@@ -186,7 +184,7 @@
 
     <div class="panel" id="p-safe" role="tabpanel" aria-labelledby="t-safe" tabindex="0">
       <h3>Safe to reclaim</h3>
-      <p class="cap">Everything Ballast is sure you can remove: caches, old downloads and build output that come back when needed, and nothing you use.</p>
+      <p class="cap">Caches, old downloads and build output. Everything here comes back when needed.</p>
       <figure class="shot"><picture>
         <source media="(prefers-color-scheme: dark)" srcset="screenshots/safe-dark.png">
         <img src="screenshots/safe.png" width="2120" height="1464" loading="lazy" decoding="async" alt="Safe to reclaim: 38.75 GB of simulator runtimes, package caches and old Ruby versions, grouped by tool, each group with a Review and remove button">
@@ -195,7 +193,7 @@
 
     <div class="panel" id="p-proj" role="tabpanel" aria-labelledby="t-proj" tabindex="0">
       <h3>Project leftovers</h3>
-      <p class="cap">Which <code>node_modules</code> and build folders belong to projects you haven't touched in a while, and which git worktrees are done with.</p>
+      <p class="cap"><code>node_modules</code> and build folders from projects you haven't touched in a while, and git worktrees that are done.</p>
       <figure class="shot"><picture>
         <source media="(prefers-color-scheme: dark)" srcset="screenshots/projects-dark.png">
         <img src="screenshots/projects.png" width="2120" height="1464" loading="lazy" decoding="async" alt="Project leftovers: idle node_modules folders and git worktrees, badged with merged or open pull requests and uncommitted changes">
@@ -204,7 +202,7 @@
 
     <div class="panel" id="p-ai" role="tabpanel" aria-labelledby="t-ai" tabindex="0">
       <h3>AI models</h3>
-      <p class="cap">Every model you've downloaded, wherever the tool put it. Ollama models go with <code>ollama rm</code>, and a blob two models share stays until neither needs it.</p>
+      <p class="cap">Every model you've downloaded, wherever the tool put it. Ollama models go via <code>ollama rm</code>. A blob two models share stays until neither needs it.</p>
       <figure class="shot"><picture>
         <source media="(prefers-color-scheme: dark)" srcset="screenshots/models-dark.png">
         <img src="screenshots/models.png" width="2120" height="1464" loading="lazy" decoding="async" alt="AI models: Ollama, Hugging Face and LM Studio models with their sizes, two ticked for removal">
@@ -214,7 +212,7 @@
     <div class="panel menu-panel" id="p-menu" role="tabpanel" aria-labelledby="t-menu" tabindex="0">
       <div>
         <h3>Menu bar</h3>
-        <p class="cap">Free space at a glance. Click for the biggest concerns, what's safe to reclaim and a connected iPhone's storage. Only one copy of Ballast runs at a time: opening it again brings up the window you already have.</p>
+        <p class="cap">Free space in the menu bar. Click it for the biggest concerns, what's safe to reclaim and a connected iPhone's storage. Only one copy runs at a time; opening it again focuses the existing window.</p>
       </div>
       <figure class="shot narrow"><picture>
         <source media="(prefers-color-scheme: dark)" srcset="screenshots/menu-dark.png">
@@ -227,7 +225,7 @@
 <section id="finds">
   <div class="wrap">
     <h2>What it finds.</h2>
-    <p class="lede">Developer clutter that general cleaners miss, across more than 60 tools.</p>
+    <p class="lede">The developer clutter general cleaners skip, across 60+ tools.</p>
 
     <div class="grid">
       <article class="cat">
@@ -237,7 +235,7 @@
       </article>
       <article class="cat">
         <h3>Xcode and Android</h3>
-        <p>Old Xcodes, simulators and their runtimes, plus Android images and emulators.</p>
+        <p>Old Xcodes, simulators and runtimes, plus Android images and emulators.</p>
         <details open><summary>Tools</summary><ul class="chips"><li>Xcode</li><li>simulators</li><li>runtimes</li><li>device support</li><li>system images</li><li>NDKs</li><li>emulators</li></ul></details>
       </article>
       <article class="cat">
@@ -252,12 +250,12 @@
       </article>
       <article class="cat">
         <h3>Caches</h3>
-        <p>Package manager caches and large app caches, all of which come back when needed.</p>
+        <p>Package manager caches and large app caches. All of it comes back when needed.</p>
         <details open><summary>Tools</summary><ul class="chips"><li>npm</li><li>Yarn</li><li>pnpm</li><li>Bun</li><li>pip</li><li>Cargo</li><li>Go modules</li><li>Gradle</li><li>Maven</li><li>CocoaPods</li><li>SwiftPM</li><li>Composer</li></ul></details>
       </article>
       <article class="cat">
         <h3>Local databases</h3>
-        <p>Data directories for databases you set up once. Running ones are left alone.</p>
+        <p>Data directories for databases you set up once. Running ones are skipped.</p>
         <details open><summary>Tools</summary><ul class="chips"><li>Postgres</li><li>MySQL</li><li>Redis</li><li>Homebrew</li><li>Postgres.app</li><li>DBngin</li></ul></details>
       </article>
       <article class="cat">
@@ -287,7 +285,7 @@
       </article>
       <article class="cat count" aria-label="Tool count">
         <span class="big">60+</span>
-        <p>tools recognised, from rvm to Ollama.</p>
+        <p>tools, from rvm to Ollama.</p>
       </article>
     </div>
   </div>
@@ -302,10 +300,10 @@
         <img src="screenshots/iphone.png" width="2120" height="2024" loading="lazy" decoding="async" alt="Connected iPhone: a storage bar split into photos and videos, apps, iOS, not visible over USB and free, then large videos and apps with two videos and one app ticked">
       </picture></figure>
       <ul>
-        <li><b>Plug in by USB.</b> It shows up as soon as the phone is unlocked and trusted. Nothing to install: the iPhone tools are built into Ballast.</li>
-        <li><b>Videos are moved, not just deleted.</b> Each is copied to your Mac and size-checked, and the original goes only if they match.</li>
-        <li><b>iCloud Photos is named.</b> With it on, deleting from the iPhone deletes everywhere else too, and Ballast asks you to confirm.</li>
-        <li><b>Uninstalling an app deletes its data.</b> You can reinstall it, but the data returns only if the app syncs it.</li>
+        <li><b>Plug in by USB.</b> It appears once the phone is unlocked and trusted. The iPhone tools are built in.</li>
+        <li><b>Videos are moved, not deleted.</b> Each is copied to your Mac and size-checked. The original goes only if they match.</li>
+        <li><b>iCloud Photos is named.</b> With it on, deleting from the iPhone deletes everywhere. Ballast asks you to confirm.</li>
+        <li><b>Uninstalling an app deletes its data.</b> You can reinstall, but the data only comes back if the app syncs it.</li>
       </ul>
     </div>
   </div>
@@ -314,7 +312,7 @@
 <section id="install">
   <div class="wrap">
     <h2>Install.</h2>
-    <p class="lede">macOS 14 or later. No account, no installer.</p>
+    <p class="lede">macOS 14+. No account, no installer.</p>
 
     <div class="tabs install-tabs" role="tablist" aria-label="Install method" id="install-tabs" hidden>
       <button class="tab" role="tab" id="i-dl" aria-controls="ip-dl" aria-selected="true">Download</button>
@@ -346,7 +344,7 @@ make install</code></pre></div>
       </div>
     </div>
 
-    <p class="note" style="margin-top:20px">First run: Ballast asks where your projects live, so it can see which versions they need and never suggest removing one that's in use. Change the folders in Settings any time.</p>
+    <p class="note" style="margin-top:20px">First run, Ballast asks where your projects live so it can see which versions they pin. Change the folders in Settings any time.</p>
   </div>
 </section>
 
@@ -359,7 +357,7 @@ make install</code></pre></div>
         <li><span class="tag">no analytics</span></li>
         <li><span class="tag">no permissions up front</span></li>
       </ul>
-      <p>Full Disk Access is only for protected locations, and Ballast says so when you reach that step. Administrator steps are never run for you: you get the exact <code>sudo</code> command to run yourself. The network is used for two things: a daily check of GitHub for a newer Ballast, and, if you have the GitHub CLI signed in, asking GitHub whether a worktree's pull request is merged.</p>
+      <p>Full Disk Access is only for protected locations, and it tells you when you get there. Admin steps are never run for you; you get the exact <code>sudo</code> command. Network use: a daily GitHub check for a new release, and, if the GitHub CLI is signed in, whether a worktree's PR is merged.</p>
     </div>
   </div>
 </section>
@@ -375,7 +373,7 @@ make install</code></pre></div>
       <a href="https://github.com/linearza/ballast/blob/main/LICENSE">MIT licence</a>
       <a href="https://github.com/linearza/ballast#third-party-software">Third-party notices</a>
     </nav>
-    <p>Official builds: the only official Ballast is the one on <a href="https://github.com/linearza/ballast/releases">Releases</a>. If you distribute a modified build, give it a different name, icon and bundle identifier.</p>
+    <p>The only official Ballast is the one on <a href="https://github.com/linearza/ballast/releases">Releases</a>. If you distribute a modified build, give it a different name, icon and bundle identifier.</p>
   </div>
 </footer>
 

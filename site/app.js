@@ -76,7 +76,7 @@
     function tween(from, to, ms) {
       var t0 = performance.now();
       (function step(t) {
-        var k = Math.min(1, (t - t0) / ms);
+        var k = Math.max(0, Math.min(1, (t - t0) / ms));
         num.textContent = (from + (to - from) * (1 - Math.pow(1 - k, 3))).toFixed(2) + " GB";
         if (k < 1) requestAnimationFrame(step);
       })(t0);
