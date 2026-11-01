@@ -88,13 +88,13 @@
 
       <article class="card">
         <h3>A worktree with unpushed commits</h3>
-        <p>Done means the PR is merged and nothing is uncommitted or unpushed.</p>
+        <p>A worktree is done when its PR is merged and nothing is left uncommitted or unpushed.</p>
         <div class="item">
           <div class="meta"><span class="name">billing-api worktree retry-webhooks</span><span>640 MB</span></div>
           <span class="sub">~/Code/billing-api-wt/retry-webhooks</span>
           <div class="tags"><span class="tag warn">2 unpushed</span><span class="tag">merged PR</span><span class="tag review">Review</span></div>
         </div>
-        <p class="outcome"><strong>Marked Review, not safe.</strong> Uncommitted changes and it refuses outright.</p>
+        <p class="outcome"><strong>Marked Review, not safe.</strong> If anything is uncommitted, it refuses outright.</p>
       </article>
 
       <article class="card">
@@ -173,7 +173,7 @@
 <section id="tour">
   <div class="wrap">
     <h2>See what it sees.</h2>
-    <p class="lede">Menu bar icon for free space. Main window to review and remove a group at a time.</p>
+    <p class="lede">The menu bar shows free space. The main window is where you review and remove, one group at a time.</p>
 
     <div class="tabs" role="tablist" aria-label="Product tour" id="tour-tabs" hidden>
       <button class="tab" role="tab" id="t-safe" aria-controls="p-safe" aria-selected="true">Safe to reclaim</button>
@@ -212,7 +212,7 @@
     <div class="panel menu-panel" id="p-menu" role="tabpanel" aria-labelledby="t-menu" tabindex="0">
       <div>
         <h3>Menu bar</h3>
-        <p class="cap">Free space in the bar. Click for the biggest concerns, what's safe to reclaim and a connected iPhone's storage. Only one copy runs at a time; opening it again focuses the existing window.</p>
+        <p class="cap">Free space in the menu bar. Click it for the biggest concerns, what's safe to reclaim and a connected iPhone's storage. Only one copy runs at a time; opening it again focuses the existing window.</p>
       </div>
       <figure class="shot narrow"><picture>
         <source media="(prefers-color-scheme: dark)" srcset="screenshots/menu-dark.png">
@@ -225,7 +225,7 @@
 <section id="finds">
   <div class="wrap">
     <h2>What it finds.</h2>
-    <p class="lede">The clutter general cleaners skip. 60+ tools.</p>
+    <p class="lede">The developer clutter general cleaners skip, across 60+ tools.</p>
 
     <div class="grid">
       <article class="cat">
@@ -250,7 +250,7 @@
       </article>
       <article class="cat">
         <h3>Caches</h3>
-        <p>Package manager caches and large app caches. All of them regenerate.</p>
+        <p>Package manager caches and large app caches. All of it comes back when needed.</p>
         <details open><summary>Tools</summary><ul class="chips"><li>npm</li><li>Yarn</li><li>pnpm</li><li>Bun</li><li>pip</li><li>Cargo</li><li>Go modules</li><li>Gradle</li><li>Maven</li><li>CocoaPods</li><li>SwiftPM</li><li>Composer</li></ul></details>
       </article>
       <article class="cat">
