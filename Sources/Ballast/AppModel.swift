@@ -30,6 +30,11 @@ import UserNotifications
     var firstRun = false
 
     @ObservationIgnored private var timer: Timer?
+    @ObservationIgnored private var watcher: IPhoneWatcher?
+    @ObservationIgnored private var rescanQueue = IPhoneRescanQueue()
+    /// The pending settle-then-rescan, replaced by each new attach so a burst becomes one rescan.
+    @ObservationIgnored private var settleTask: Task<Void, Never>?
+    @ObservationIgnored private var lockedAttempts = 0
 
     static let support = FileManager.default.homeDirectoryForCurrentUser.appending(path: "Library/Application Support/Ballast")
     static let summaryURL = support.appending(path: "summary.json")
@@ -44,6 +49,7 @@ import UserNotifications
         } else {
             prefs = Preferences()
             Task { await launch() }
+            startIPhoneWatcher()
         }
     }
 
@@ -112,9 +118,60 @@ import UserNotifications
             reports = fresh + kept
             summary = await scanner.lastSummary()
         }
-        if only == nil || only?.contains("iphone") == true { iphone = report("iphone")?.iphone }
+        if only == nil || only?.contains("iphone") == true {
+            iphone = report("iphone")?.iphone
+            scheduleLockedRetry()
+        }
         refreshSpace()
         await measureTrash()
+        runQueuedIPhoneRescan()
+    }
+
+    // MARK: - Plug and unplug
+
+    func startIPhoneWatcher() {
+        guard watcher == nil else { return }
+        let w = IPhoneWatcher(onAttach: { [weak self] in self?.iphoneAttached() }, onDetach: { [weak self] in self?.iphoneDetached() })
+        w.start()
+        watcher = w
+    }
+
+    /// Waits a moment for usbmuxd to register the phone, then rescans just the iPhone.
+    private func iphoneAttached() {
+        lockedAttempts = 0
+        queueIPhoneRescan(after: IPhoneWatch.settleDelay)
+    }
+
+    /// Takes the phone off the menu and the sidebar at once.
+    private func iphoneDetached() {
+        settleTask?.cancel()
+        rescanQueue.cancel()
+        lockedAttempts = 0
+        iphone = nil
+        reports.removeAll { $0.id == "iphone" }
+    }
+
+    private func queueIPhoneRescan(after delay: TimeInterval) {
+        settleTask?.cancel()
+        settleTask = Task { [weak self] in
+            try? await Task.sleep(for: .seconds(delay))
+            guard !Task.isCancelled, let self else { return }
+            rescanQueue.request()
+            runQueuedIPhoneRescan()
+        }
+    }
+
+    /// Starts the wanted rescan unless a scan is running; the running scan calls this again when it ends.
+    private func runQueuedIPhoneRescan() {
+        guard rescanQueue.take(scanning: scanning) else { return }
+        Task { await scanNow(only: ["iphone"], background: true) }
+    }
+
+    /// A phone that answered "locked" gets a look again at 10 s and 30 s, so it fills in after Unlock and Trust.
+    private func scheduleLockedRetry() {
+        guard iphone?.state == .locked else { lockedAttempts = 0; return }
+        lockedAttempts += 1
+        if let delay = IPhoneWatch.lockedRetryDelay(afterAttempt: lockedAttempts) { queueIPhoneRescan(after: delay) }
     }
 
     func measureTrash() async {
