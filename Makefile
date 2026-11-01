@@ -61,8 +61,9 @@ release: check vendor
 	cd $(DIST) && rm -f $(APP)-$(VERSION).zip && ditto -c -k --keepParent $(APP).app $(APP)-$(VERSION).zip
 	@echo "$(DIST)/$(APP)-$(VERSION).zip"
 
-# Signs the release with a Developer ID and has Apple notarise it, so macOS opens it without a warning.
-# Needs a paid Apple Developer account. Once: store credentials with
+# Maintainer only: signs an official release with the project's Developer ID and has Apple notarise it,
+# so macOS opens it without a warning. Builds signed by anyone else are not official (see README).
+# Once: store credentials with
 #   xcrun notarytool store-credentials ballast --apple-id you@example.com --team-id TEAMID
 # then: make notarize DEVELOPER_ID="Developer ID Application: Your Name (TEAMID)"
 NOTARY_PROFILE ?= ballast

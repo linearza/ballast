@@ -185,7 +185,6 @@ make test      # run the tests
 make app       # build dist/Ballast.app
 make icon      # re-render Resources/AppIcon.icns
 make release   # universal build and dist/Ballast-<version>.zip
-make notarize DEVELOPER_ID="Developer ID Application: …"  # sign and notarise the release (needs an Apple Developer account)
 make screenshots  # re-render docs/screenshots from sample data
 ```
 
@@ -196,6 +195,10 @@ The scanning and cleanup logic lives in `Sources/BallastCore` and is tested agai
 ## Licence
 
 MIT
+
+### Official builds
+
+The only official Ballast is the one on this repository's [Releases](https://github.com/linearza/ballast/releases) page, built and published by its maintainer. The MIT licence lets you build, change and share your own copy. If you distribute a modified build, give it a different name, icon and bundle identifier (not `za.co.linear.ballast`), so nobody mistakes it for Ballast or gets it replaced by a Ballast update.
 
 ### Third-party software
 

@@ -37,11 +37,7 @@ public enum SingleInstance {
         if others.isEmpty { return .proceed }
         guard let mine = parse(ours) else { return .deferToRunning }
         for other in others {
-            guard let theirs = parse(other), compare(theirs, mine) >= 0 else {
-                if parse(other) == nil { return .deferToRunning }
-                continue
-            }
-            return .deferToRunning
+            guard let theirs = parse(other), compare(theirs, mine) < 0 else { return .deferToRunning }
         }
         return .replaceRunning
     }
