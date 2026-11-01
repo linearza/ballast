@@ -4,7 +4,7 @@
 
 <h1 align="center">Ballast</h1>
 
-<p align="center">A menu bar app for macOS that finds the disk space developer tools leave behind, and gives it back safely.</p>
+<p align="center"><strong>Get your disk space back without breaking a project.</strong></p>
 
 <p align="center"><a href="https://ballast.linear.co.za">ballast.linear.co.za</a> · <a href="https://github.com/linearza/ballast/releases/latest">Download</a></p>
 
@@ -13,12 +13,35 @@
   <img src="docs/screenshots/main.png" alt="Ballast's main window listing Ruby versions, with the default and pinned versions marked and three old versions ticked for removal">
 </picture>
 
-Old Ruby and Node versions, `node_modules` in projects you forgot about, simulator runtimes, Docker images, package caches, AI models you tried once. Developer tools leave tens of gigabytes behind, and most clean-up apps either can't see them or can't tell what's still in use. Ballast knows which version your projects pin, which worktree still has unpushed work and which database is running, and it shows you exactly what it will do before it does anything.
+## What is Ballast?
 
-- **Sees developer clutter** that general cleaners miss, across more than 60 tools.
-- **Knows what's in use:** versions your projects pin or you use by default, running databases, worktrees with open pull requests.
-- **Previews every step**, says whether each one can be undone, and asks harder the more there is to lose.
-- **Asks for no permissions up front,** needs no account and has no analytics.
+Ballast is a menu bar app for macOS. It finds the disk space developer tools leave behind and gives it back safely: old Ruby and Node versions, `node_modules` in projects you forgot about, simulator runtimes, Docker images, package caches, AI models you tried once, and the videos filling up your iPhone.
+
+It's for developers whose Mac keeps filling up. Most clean-up apps either can't see this kind of clutter or can't tell what's still in use. Ballast knows which version your projects pin, which worktree still has unpushed work and which database is running. It labels every item by risk (*Regenerable*, *Review* or *Your data*) and shows you every step before it does anything.
+
+Ballast is free, open source and private: it needs no account, has no analytics, and nothing leaves your Mac apart from a daily check of GitHub for a newer release.
+
+## Get started
+
+1. **Download** the latest `Ballast-x.y.z.zip` from [Releases](https://github.com/linearza/ballast/releases/latest). It needs macOS 14 or later. Unzip it, move `Ballast.app` to `~/Applications` or `/Applications` and open it. Ballast isn't notarised, so macOS blocks it the first time: see [From a release](#from-a-release) for the one-step fix. Prefer to build it yourself? See [From source](#from-source).
+2. **Pick your project folders.** On first run Ballast asks where your projects live, so it never suggests removing a version they need. See [First run](#first-run).
+3. **Look for the icon in the menu bar.** It shows free space at a glance, and Ballast scans in the background.
+4. **Review.** Click the icon for what's safe to reclaim, or open the window and tick what you want to go.
+5. **Remove.** Ballast lists every step first. Confirm, and the space comes back.
+
+Ballast asks for no permissions up front. **Full Disk Access** is only needed for a few protected locations (some app containers and the Docker disk image); Ballast shows those as locked and explains how to grant access if you want them measured. More under [Permissions](#permissions).
+
+## How it keeps you safe
+
+- **A preview first.** Nothing happens until you've seen every path it will move and every command it will run.
+- **A re-check before acting.** If something changed since the scan (a project now pins a version, a worktree has new changes, a database is running), that step is skipped and the reason is shown.
+- **Undo is spelled out.** Files go to the Trash. Commands a tool runs for itself delete for good, and the step says so.
+- **It asks harder the more you could lose.** Anything that can lose your work sits under **Read this first**, and Remove stays off until you tick **I understand**.
+- **In-use versions are protected.** Versions your projects pin or you use by default are marked and never ticked by **Select safe**.
+- **Some folders are never removed:** your home folder, your SSH and GPG keys and macOS's own folders.
+- **Every action is logged** to `~/Library/Application Support/Ballast/actions.log`.
+
+The full list is under [Safety in detail](#safety-in-detail).
 
 ## What it finds
 
@@ -75,7 +98,7 @@ The menu bar icon shows free space at a glance. Click it for a summary of the bi
   <img src="docs/screenshots/iphone.png" alt="Connected iPhone: a storage bar split into photos and videos, apps, iOS, not visible over USB and free, then large videos and apps with two videos and one app ticked">
 </picture>
 
-## Safety
+## Safety in detail
 
 Ballast is built so that cleaning up is hard to regret.
 
