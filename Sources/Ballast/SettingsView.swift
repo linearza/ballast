@@ -55,11 +55,12 @@ struct SettingsView: View {
                        isOn: Binding(get: { prefs.quiet }, set: { prefs.quiet = $0 }))
                 Text("Ballast keeps rescanning in the background. Open it from Applications or Spotlight to see it, and press ⌘, to get back here.")
                     .font(.caption).foregroundStyle(.secondary)
-                if let update = model.updates.available {
-                    Link("Ballast \(update.version) is out", destination: update.url)
-                } else {
+                HStack {
                     Text("Ballast \(model.updates.current)").foregroundStyle(.secondary)
+                    Spacer()
+                    CheckForUpdatesButton(model: model)
                 }
+                if UpdateRow.visible(model.updates) { UpdateRow(model: model) }
             }
         }
         .formStyle(.grouped)

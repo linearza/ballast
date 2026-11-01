@@ -219,16 +219,6 @@ public final class Executor: Sendable {
         case .skipped(let why), .failed(let why): detail = why
         default: detail = r.step.kind.display
         }
-        let clean = { (s: String) in s.replacingOccurrences(of: "\t", with: " ").replacingOccurrences(of: "\n", with: " | ") }
-        let line = [ISO8601DateFormatter().string(from: env.now()), r.outcome.label, clean(r.step.title), clean(detail)]
-            .joined(separator: "\t") + "\n"
-        try? FileManager.default.createDirectory(at: logURL.deletingLastPathComponent(), withIntermediateDirectories: true)
-        if let handle = try? FileHandle(forWritingTo: logURL) {
-            defer { try? handle.close() }
-            _ = try? handle.seekToEnd()
-            try? handle.write(contentsOf: Data(line.utf8))
-        } else {
-            try? Data(line.utf8).write(to: logURL)
-        }
+        ActionLog.append(to: logURL, date: env.now(), outcome: r.outcome.label, title: r.step.title, detail: detail)
     }
 }
