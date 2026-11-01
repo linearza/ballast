@@ -206,8 +206,9 @@ import SwiftUI
         w.appearance = NSAppearance(named: dark ? .darkAqua : .aqua)
         w.alphaValue = 0
         w.isReleasedWhenClosed = false
+        w.backgroundColor = NSColor(Theme.bg)
         // Borderless windows (menu, sheet) get the window background a real menu or sheet would draw.
-        let host = NSHostingView(rootView: view.background(Color(nsColor: .windowBackgroundColor)))
+        let host = NSHostingView(rootView: view.background(Theme.bg))
         w.contentView = host
         if fit { w.setContentSize(host.fittingSize) } else { w.setContentSize(size) }
         w.orderFront(nil)

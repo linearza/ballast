@@ -10,59 +10,69 @@ struct Popover: View {
             if let summary = model.summary {
                 Button { open(SafeView.id) } label: {
                     HStack {
-                        Text("Safe to reclaim: \(formatBytes(model.safeToReclaim))").font(.headline)
+                        HStack(spacing: 6) {
+                            Text("Safe to reclaim").font(.headline)
+                            Text(formatBytes(model.safeToReclaim)).font(Theme.mono(.headline).weight(.semibold)).foregroundStyle(Theme.accent)
+                        }
                         Spacer()
-                        Image(systemName: "chevron.right").foregroundStyle(.secondary)
+                        Image(systemName: "chevron.right").foregroundStyle(Theme.muted)
                     }
                     .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
                 .help("See what's safe to remove")
-                Divider()
+                Rule()
                 ForEach(summary.concerns.prefix(5), id: \.id) { c in
                     Button { open(c.id) } label: {
                         HStack {
                             Image(systemName: c.symbol).frame(width: 20)
                             Text(c.title)
                             Spacer()
-                            Text(formatBytes(c.bytes)).monospacedDigit().foregroundStyle(.secondary)
+                            Text(formatBytes(c.bytes)).font(Theme.mono()).foregroundStyle(Theme.muted)
                         }
                         .contentShape(Rectangle())
                     }
                     .buttonStyle(.plain)
                 }
             } else {
-                Text(model.scanning ? "Scanning your disk…" : "No scan yet.").foregroundStyle(.secondary)
+                Text(model.scanning ? "Scanning your disk…" : "No scan yet.").foregroundStyle(Theme.muted)
             }
             if let phone = model.iphone, let block = iphoneBlock(phone) {
-                Divider()
+                Rule()
                 block
             }
-            Divider()
+            Rule()
             trash
-            Divider()
+            Rule()
             if let update = model.updates.available {
-                Link("Ballast \(update.version) is out", destination: update.url).font(.callout)
+                Link("Ballast \(update.version) is out", destination: update.url).font(.callout).foregroundStyle(Theme.accent).foregroundStyle(Theme.accent)
             }
             footer
         }
         .padding(14)
         .frame(width: 320)
+        .ballastSurface()
     }
 
     var freeSpace: some View {
         VStack(alignment: .leading, spacing: 4) {
-            ProgressView(value: 1 - model.freeFraction)
-                .tint(model.freeFraction < 0.1 ? .red : model.freeFraction < 0.2 ? .orange : .accentColor)
+            let fill = model.freeFraction < 0.1 ? Theme.danger : model.freeFraction < 0.2 ? Theme.review : Theme.ctaBg
+            GeometryReader { geo in
+                ZStack(alignment: .leading) {
+                    Capsule().fill(Theme.bg3)
+                    Capsule().fill(fill).frame(width: geo.size.width * min(1, max(0, 1 - model.freeFraction)))
+                }
+            }
+            .frame(height: 6)
             HStack {
                 Text("\(formatBytes(model.free)) free of \(formatBytes(model.total))")
-                    .font(.callout).monospacedDigit()
+                    .font(Theme.mono(.callout))
                 Spacer()
                 // Here rather than in the footer, which has no room for it next to the buttons.
                 if model.scanning {
-                    Text("Scanning…").font(.caption).foregroundStyle(.secondary)
+                    Text("Scanning…").font(.caption).foregroundStyle(Theme.muted)
                 } else if let at = model.summary?.scannedAt {
-                    Text("Scanned \(relativeScanTime(at, now: Date()))").font(.caption).foregroundStyle(.secondary)
+                    Text("Scanned \(relativeScanTime(at, now: Date()))").font(.caption).foregroundStyle(Theme.muted)
                 }
             }
         }
@@ -79,9 +89,9 @@ struct Popover: View {
                         Image(systemName: "iphone").frame(width: 20)
                         Text(phone.name)
                         Spacer()
-                        Image(systemName: "chevron.right").foregroundStyle(.secondary)
+                        Image(systemName: "chevron.right").foregroundStyle(Theme.muted)
                     }
-                    Text("Unlock it and tap Trust").font(.caption).foregroundStyle(.secondary).padding(.leading, 28)
+                    Text("Unlock it and tap Trust").font(.caption).foregroundStyle(Theme.muted).padding(.leading, 28)
                 }
                 .contentShape(Rectangle())
             }
@@ -95,8 +105,8 @@ struct Popover: View {
                         Image(systemName: "iphone").frame(width: 20)
                         Text(phone.name).lineLimit(1)
                         Spacer()
-                        Text("\(formatBytes(storage.free)) free").monospacedDigit().foregroundStyle(.secondary)
-                        Image(systemName: "chevron.right").foregroundStyle(.secondary)
+                        Text("\(formatBytes(storage.free)) free").font(Theme.mono()).foregroundStyle(Theme.muted)
+                        Image(systemName: "chevron.right").foregroundStyle(Theme.muted)
                     }
                     StorageBar(storage: storage, height: 6).padding(.leading, 28)
                     iphoneCaption(storage, videos: phone.media.videoBytes).padding(.leading, 28)
@@ -117,7 +127,7 @@ struct Popover: View {
         return ViewThatFits(in: .horizontal) {
             ForEach(options, id: \.self) { Text($0).lineLimit(1).fixedSize(horizontal: true, vertical: false) }
         }
-        .font(.caption).foregroundStyle(.secondary)
+        .font(.caption).foregroundStyle(Theme.muted)
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 
@@ -127,9 +137,10 @@ struct Popover: View {
             Text("Trash")
             Spacer()
             if let bytes = model.trashBytes {
-                Text(formatBytes(bytes)).monospacedDigit().foregroundStyle(.secondary)
+                Text(formatBytes(bytes)).font(Theme.mono()).foregroundStyle(Theme.muted)
             }
             Button("Empty") { Task { await model.emptyTrash() } }
+                .buttonStyle(LineButtonStyle())
                 .disabled(model.trashBytes == 0)
         }
     }
@@ -138,16 +149,16 @@ struct Popover: View {
         HStack {
             if model.scanning { ProgressView().controlSize(.small) }
             Spacer()
-            Button("Scan now") { Task { await model.scanNow() } }.disabled(model.scanning)
-            Button("Open Ballast") { open(nil) }
+            Button("Scan now") { Task { await model.scanNow() } }.buttonStyle(LineButtonStyle()).disabled(model.scanning)
+            Button("Open Ballast") { open(nil) }.buttonStyle(BrassButtonStyle())
             Menu {
                 Text("Ballast \(model.updates.current)")  // disabled: it only says which version this is
                 Divider()
                 Button("Settings…") { Windows.shared.showSettings(model) }
                 Button("Go Quiet…") { goQuiet(model) }
-                Divider()
+                Rule()
                 Button("Quit Ballast") { NSApp.terminate(nil) }
-            } label: { Image(systemName: "gearshape") }
+            } label: { Image(systemName: "gearshape").foregroundStyle(Theme.accent) }
                 .menuStyle(.borderlessButton)
                 .menuIndicator(.hidden)
                 .fixedSize()

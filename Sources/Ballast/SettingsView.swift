@@ -61,6 +61,9 @@ struct SettingsView: View {
             }
         }
         .formStyle(.grouped)
+        .scrollContentBackground(.hidden)
+        .background(Theme.bg)
+        .tint(Theme.ctaBg)
         .frame(width: 520)
         .onAppear { login.refresh() }
     }
@@ -166,11 +169,13 @@ struct FirstRunSheet: View {
                 Button("Continue") {
                     Task { await model.confirmRoots(choice.found.filter { choice.ticked.contains($0) }) }
                 }
+                .buttonStyle(BrassButtonStyle())
                 .keyboardShortcut(.defaultAction)
             }
         }
         .padding(20)
         .frame(width: 460)
+        .ballastSurface()
     }
 }
 
