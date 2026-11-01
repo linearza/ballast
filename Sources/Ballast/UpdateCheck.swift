@@ -86,13 +86,15 @@ import UserNotifications
         }
         log("done", "\(current) to \(release.version), \(target.path)")
         phase = .installed(release.version)
-        let config = NSWorkspace.OpenConfiguration()
-        config.createsNewApplicationInstance = true
-        do {
-            // The new copy sees this older one running and takes over (see SingleInstance); quitting here just makes it quicker.
-            _ = try await NSWorkspace.shared.openApplication(at: target, configuration: config)
-        } catch {
-            return settle(.failed("Ballast \(release.version) is installed, but it wouldn't open. Open it from Applications."))
+        // Quit first, then open. Opening while this copy runs doesn't work: our NSRunningApplication's bundleURL now
+        // holds the new version, so SingleInstance in the new copy sees an equal version and defers to us.
+        // The helper waits for this process to exit (up to a minute, in case quitting is refused mid-clean).
+        let relaunch = Process()
+        relaunch.executableURL = URL(filePath: "/bin/sh")
+        relaunch.arguments = ["-c", "for i in $(seq 1 300); do kill -0 \"$1\" 2>/dev/null || break; sleep 0.2; done; /usr/bin/open \"$2\"",
+                              "relaunch", String(ProcessInfo.processInfo.processIdentifier), target.path]
+        do { try relaunch.run() } catch {
+            return settle(.failed("Ballast \(release.version) is installed. Quit and open it again to finish."))
         }
         NSApp.terminate(nil)  // refused mid-clean; the row then says what to do
     }

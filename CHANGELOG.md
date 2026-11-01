@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.5.5 — 2026-11-01
 
 - **Update in one click.** When a new version is out, *Update to x.y.z* downloads it from GitHub, checks it, swaps it in and relaunches. *Check for updates* is in Settings and the gear menu.
 
