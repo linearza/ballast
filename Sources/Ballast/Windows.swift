@@ -31,6 +31,7 @@ import SwiftUI
         let w = NSWindow(contentRect: NSRect(origin: .zero, size: size), styleMask: style, backing: .buffered, defer: false)
         w.title = title
         w.isReleasedWhenClosed = false
+        w.backgroundColor = NSColor(Theme.bg)
         w.contentViewController = NSHostingController(rootView: content)
         w.setContentSize(size)
         w.center()

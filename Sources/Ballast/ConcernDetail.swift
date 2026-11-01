@@ -13,10 +13,10 @@ struct ConcernDetail: View {
     var body: some View {
         VStack(spacing: 0) {
             header
-            Divider()
+            Rule()
             if report != nil {
                 table
-                Divider()
+                Rule()
                 bottomBar
             } else if provider?.needsUserStart == true {
                 largeFilesIntro
@@ -24,6 +24,7 @@ struct ConcernDetail: View {
                 ProgressView().frame(maxWidth: .infinity, maxHeight: .infinity)
             }
         }
+        .background(Theme.bg)
         .navigationTitle(provider?.title ?? "")
     }
 
@@ -31,17 +32,18 @@ struct ConcernDetail: View {
         HStack(alignment: .firstTextBaseline, spacing: 16) {
             if let report {
                 VStack(alignment: .leading) {
-                    Text(formatBytes(report.total)).font(.title2.monospacedDigit())
-                    Text("Safe to reclaim: \(formatBytes(report.reclaimable))").font(.callout).foregroundStyle(.secondary)
+                    Text(formatBytes(report.total)).font(Theme.mono(.title2).weight(.semibold)).foregroundStyle(Theme.accent)
+                    (Text("Safe to reclaim ").foregroundStyle(Theme.muted) + Text(formatBytes(report.reclaimable)).font(Theme.mono(.callout)).foregroundStyle(Theme.ok)).font(.callout)
                 }
             }
             Spacer()
             if let provider, let report {
                 ForEach(provider.extraActions(report.items)) { action in
-                    Button(action.title) { Task { await model.prepare(concern: concernID, ids: [action.id]) } }
+                    Button(action.title) { Task { await model.prepare(concern: concernID, ids: [action.id]) } }.buttonStyle(LineButtonStyle())
                 }
             }
             Button("Rescan") { Task { await model.scanNow(only: [concernID]) } }
+                .buttonStyle(LineButtonStyle())
                 .disabled(model.scanning)
         }
         .padding(14)
@@ -64,24 +66,21 @@ struct ConcernDetail: View {
                 VStack(alignment: .leading, spacing: 2) {
                     Text(item.title)
                     if let detail = item.detail {
-                        Text(detail).font(.caption).foregroundStyle(.secondary).lineLimit(1).truncationMode(.middle)
+                        Text(detail).font(Theme.mono(.caption)).foregroundStyle(Theme.muted).lineLimit(1).truncationMode(.middle)
                     }
                 }
             }
             TableColumn("Status") { item in
                 HStack(spacing: 4) {
                     ForEach(item.badges.sorted { $0.label < $1.label }, id: \.self) { b in
-                        Text(b.label)
-                            .font(.caption)
-                            .padding(.horizontal, 6).padding(.vertical, 1)
-                            .background(Capsule().fill(b.meansInUse ? Color.orange.opacity(0.2) : Color.secondary.opacity(0.15)))
+                        Tag(text: b.label, color: b.meansInUse ? Theme.review : Theme.muted, tint: b.meansInUse ? Theme.tintReview : Theme.tintNeutral)
                     }
                 }
             }
             TableColumn("Risk") { item in
-                Text(item.risk.label).foregroundStyle(item.risk.color)
+                Tag(text: item.risk.label, color: item.risk.tagColor, tint: item.risk.tagTint)
             }
-            .width(90)
+            .width(100)
             TableColumn("Size") { item in
                 if item.isLocked {
                     if model.measuring.contains(item.id) {
@@ -91,35 +90,40 @@ struct ConcernDetail: View {
                             .help("Locked: macOS protects this folder. Measuring may ask for access.")
                     }
                 } else {
-                    Text((item.sizeIsPartial ? "≥ " : "") + formatBytes(item.bytes)).monospacedDigit()
+                    Text((item.sizeIsPartial ? "≥ " : "") + formatBytes(item.bytes)).font(Theme.mono(.callout))
                 }
             }
             .width(90)
         }
+        .alternatingRowBackgrounds(.disabled)
+        .ballastList()
     }
 
     var bottomBar: some View {
         let chosen = items.filter { checked.contains($0.id) }
         return HStack {
-            Button("Select safe") { model.checked[concernID] = selectSafe(items) }
-            Button("Select none") { model.checked[concernID] = [] }.disabled(chosen.isEmpty)
+            Button("Select safe") { model.checked[concernID] = selectSafe(items) }.buttonStyle(LineButtonStyle())
+            Button("Select none") { model.checked[concernID] = [] }.buttonStyle(LineButtonStyle()).disabled(chosen.isEmpty)
             Spacer()
             Button(removeLabel(count: chosen.count, bytes: chosen.reduce(0) { $0 + $1.bytes })) {
                 Task { await model.prepare(concern: concernID, ids: chosen.map(\.id)) }
             }
+            .buttonStyle(BrassButtonStyle())
             .keyboardShortcut(.defaultAction)
             .disabled(chosen.isEmpty)
         }
         .padding(12)
+        .background(Theme.bg2)
     }
 
     var largeFilesIntro: some View {
         VStack(spacing: 12) {
-            Image(systemName: "doc.viewfinder").font(.largeTitle).foregroundStyle(.secondary)
+            Image(systemName: "doc.viewfinder").font(.largeTitle).foregroundStyle(Theme.muted)
             Text("Looks through Documents, Downloads, Desktop and Movies for files over 500 MB. macOS will ask once for each folder.")
                 .multilineTextAlignment(.center)
                 .frame(maxWidth: 380)
             Button("Scan these folders") { Task { await model.scanNow(only: [concernID]) } }
+                .buttonStyle(BrassButtonStyle())
                 .disabled(model.scanning)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -129,9 +133,9 @@ struct ConcernDetail: View {
 extension Risk {
     var color: Color {
         switch self {
-        case .regenerable: .green
-        case .review: .orange
-        case .yourData: .red
+        case .regenerable: Theme.ok
+        case .review: Theme.review
+        case .yourData: Theme.danger
         }
     }
 }

@@ -16,12 +16,14 @@ struct MainWindowRoot: View {
             } else if let id = model.selection {
                 ConcernDetail(model: model, concernID: id)
             } else if model.scanning && model.reports.isEmpty {
-                ProgressView("Scanning your disk…")
+                ProgressView("Scanning your disk…").frame(maxWidth: .infinity, maxHeight: .infinity).background(Theme.bg)
             } else {
-                Text("Choose a concern").foregroundStyle(.secondary)
+                Text("Choose a concern").foregroundStyle(Theme.muted).frame(maxWidth: .infinity, maxHeight: .infinity).background(Theme.bg)
             }
         }
         .frame(minWidth: 800, minHeight: 500)
+        .tint(Theme.ctaBg)
+        .foregroundStyle(Theme.text)
         .sheet(item: Binding(get: { model.run }, set: { model.run = $0 })) { state in
             ConfirmSheet(model: model, state: state)
         }
@@ -55,49 +57,53 @@ struct Sidebar: View {
     var body: some View {
         List(selection: Binding(get: { model.selection }, set: { model.selection = $0 })) {
             HStack {
-                Label("Safe to reclaim", systemImage: "checkmark.seal")
+                Label { Text("Safe to reclaim") } icon: { Image(systemName: "checkmark.seal").foregroundStyle(Theme.accent) }
                 Spacer()
-                Text(formatBytes(model.reports.reduce(0) { $0 + $1.reclaimable })).monospacedDigit().foregroundStyle(.secondary)
+                Text(formatBytes(model.reports.reduce(0) { $0 + $1.reclaimable })).font(Theme.mono(.callout)).foregroundStyle(Theme.accent)
             }
             .tag(SafeView.id)
+            .listRowBackground(model.selection == SafeView.id ? Theme.selection : Color.clear)
             ForEach(ConcernSection.allCases, id: \.self) { section in
                 let rows = rows(section)
                 if !rows.isEmpty {
                     SwiftUI.Section {
                         ForEach(rows, id: \.id) { row in
                             HStack {
-                                Label(row.title, systemImage: row.symbol)
+                                Label { Text(row.title) } icon: { Image(systemName: row.symbol).foregroundStyle(Theme.accent) }
                                 Spacer()
                                 if model.scanningIDs.contains(row.id) {
                                     ProgressView().controlSize(.mini)
                                 } else if let bytes = row.bytes {
-                                    Text(formatBytes(bytes)).monospacedDigit().foregroundStyle(.secondary)
+                                    Text(formatBytes(bytes)).font(Theme.mono(.callout)).foregroundStyle(Theme.muted)
                                 } else if let note = row.note {
-                                    Text(note).lineLimit(1).foregroundStyle(.secondary)
+                                    Text(note).lineLimit(1).foregroundStyle(Theme.muted)
                                 }
                             }
                             .tag(row.id)
+                            .listRowBackground(model.selection == row.id ? Theme.selection : Color.clear)
                         }
                     } header: {
                         HStack {
-                            Text(section.rawValue)
+                            Text(section.rawValue.uppercased()).font(.caption.weight(.semibold)).tracking(0.6)
                             Spacer()
                             // Nothing measured yet (Large files before it's started): no total rather than "Zero KB".
                             if rows.contains(where: { $0.bytes != nil }) {
-                                Text(formatBytes(rows.reduce(0) { $0 + ($1.bytes ?? 0) })).monospacedDigit()
+                                Text(formatBytes(rows.reduce(0) { $0 + ($1.bytes ?? 0) })).font(Theme.mono(.caption))
                             }
                         }
                     }
                 }
             }
         }
+        .ballastList(Theme.bg2)
         .safeAreaInset(edge: .bottom) {
             HStack {
-                Text("\(formatBytes(model.free)) free").font(.caption).foregroundStyle(.secondary)
+                Text("\(formatBytes(model.free)) free").font(.caption).foregroundStyle(Theme.muted)
                 Spacer()
-                Button("Scan all") { Task { await model.scanNow() } }.disabled(model.scanning)
+                Button("Scan all") { Task { await model.scanNow() } }.buttonStyle(LineButtonStyle()).disabled(model.scanning)
             }
             .padding(10)
+            .background(Theme.bg2)
         }
     }
 }

@@ -48,11 +48,11 @@ struct ConfirmSheet: View {
                 VStack(alignment: .leading, spacing: 10) {
                     ForEach(state.plan.refusals, id: \.itemID) { r in
                         let title = state.items.first { $0.id == r.itemID }?.title ?? r.itemID
-                        Label("\(title): \(r.reason)", systemImage: "xmark.octagon").foregroundStyle(.red)
+                        Label("\(title): \(r.reason)", systemImage: "xmark.octagon").foregroundStyle(Theme.danger)
                     }
                     if state.phase == .confirm && !state.dangers.isEmpty { dangerBox }
                     ForEach(state.plan.warnings, id: \.self) { w in
-                        Label(w, systemImage: "exclamationmark.triangle").foregroundStyle(.orange)
+                        Label(w, systemImage: "exclamationmark.triangle").foregroundStyle(Theme.review)
                     }
                     ForEach(Array(state.groups.enumerated()), id: \.offset) { _, group in
                         VStack(alignment: .leading, spacing: 6) {
@@ -64,46 +64,47 @@ struct ConfirmSheet: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
             }
             if state.phase == .finished && state.provider.id != "iphone" {
-                Text("Freed \(formatBytes(state.freed))").font(.headline)
+                (Text("Freed ") + Text(formatBytes(state.freed)).font(Theme.mono(.headline)).foregroundStyle(Theme.accent)).font(.headline)
                 if state.trashed > 0 {
                     Text("Moved to Trash: \(formatBytes(state.trashed)), empty the Trash to free it")
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(Theme.muted)
                 }
             }
             HStack {
                 Spacer()
                 switch state.phase {
                 case .confirm:
-                    Button("Cancel") { model.run = nil }.keyboardShortcut(.cancelAction)
+                    Button("Cancel") { model.run = nil }.buttonStyle(LineButtonStyle()).keyboardShortcut(.cancelAction)
                     // Return only confirms routine removals; anything else takes a deliberate click.
                     if state.level == .routine {
                         removeButton.keyboardShortcut(.defaultAction)
                     } else {
-                        removeButton.tint(state.level == .dangerous ? .red : nil)
+                        removeButton
                     }
                 case .running:
                     ProgressView().controlSize(.small)
                 case .finished:
-                    if state.trashed > 0 { Button("Empty Trash") { Task { await model.emptyTrash() } } }
-                    Button("Close") { model.run = nil }.keyboardShortcut(.defaultAction)
+                    if state.trashed > 0 { Button("Empty Trash") { Task { await model.emptyTrash() } }.buttonStyle(LineButtonStyle()) }
+                    Button("Close") { model.run = nil }.buttonStyle(BrassButtonStyle()).keyboardShortcut(.defaultAction)
                 }
             }
         }
         .padding(20)
         .frame(width: 560, height: 460)
+        .ballastSurface()
     }
 
     var removeButton: some View {
         Button("\(state.provider.id == "iphone" ? "Go ahead" : "Remove") · \(formatBytes(state.plan.expectedBytes))", role: state.level == .dangerous ? .destructive : nil) {
             Task { await model.execute(state) }
         }
-        .buttonStyle(.borderedProminent)
+        .buttonStyle(BrassButtonStyle(danger: state.level == .dangerous))
         .disabled(!state.canRemove)
     }
 
     var dangerBox: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Label("Read this first", systemImage: "exclamationmark.octagon.fill").font(.headline).foregroundStyle(.red)
+            Label("Read this first", systemImage: "exclamationmark.octagon.fill").font(.headline).foregroundStyle(Theme.danger)
             ForEach(state.dangers, id: \.self) { d in
                 Text("• \(d)").fixedSize(horizontal: false, vertical: true)
             }
@@ -111,8 +112,8 @@ struct ConfirmSheet: View {
         }
         .padding(10)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(RoundedRectangle(cornerRadius: 8).fill(Color.red.opacity(0.08)))
-        .overlay(RoundedRectangle(cornerRadius: 8).strokeBorder(Color.red.opacity(0.4)))
+        .background(RoundedRectangle(cornerRadius: 8).fill(Theme.dangerBg))
+        .overlay(RoundedRectangle(cornerRadius: 8).strokeBorder(Theme.dangerLine))
     }
 }
 
@@ -127,24 +128,25 @@ struct StepRow: View {
                 HStack {
                     Text(step.title)
                     Spacer()
-                    if step.expectedBytes > 0 { Text(formatBytes(step.expectedBytes)).monospacedDigit().foregroundStyle(.secondary) }
+                    if step.expectedBytes > 0 { Text(formatBytes(step.expectedBytes)).font(Theme.mono(.callout)).foregroundStyle(Theme.muted) }
                 }
                 HStack(alignment: .top) {
                     Text(step.kind.display)
-                        .font(.system(.caption, design: .monospaced))
+                        .font(Theme.mono(.caption))
                         .textSelection(.enabled)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(Theme.muted)
                     if case .copyToTerminal(let command) = step.kind {
                         Spacer()
                         Button("Copy") {
                             NSPasteboard.general.clearContents()
                             NSPasteboard.general.setString(command, forType: .string)
                         }
+                        .buttonStyle(LineButtonStyle())
                         .controlSize(.small)
                     }
                 }
                 if outcome == nil { undoNote }
-                if let message = message { Text(message).font(.caption).foregroundStyle(.red) }
+                if let message = message { Text(message).font(.caption).foregroundStyle(Theme.danger) }
             }
         }
     }
@@ -161,7 +163,7 @@ struct StepRow: View {
         }
         return Label(undo.label, systemImage: symbol)
             .font(.caption)
-            .foregroundStyle(undo == .never ? Color.orange : Color.secondary)
+            .foregroundStyle(undo == .never ? Theme.review : Theme.muted)
     }
 
     var message: String? {
@@ -173,10 +175,10 @@ struct StepRow: View {
 
     @ViewBuilder var status: some View {
         switch outcome {
-        case .done: Image(systemName: "checkmark.circle.fill").foregroundStyle(.green)
-        case .shown: Image(systemName: "terminal").foregroundStyle(.secondary)
-        case .skipped: Image(systemName: "minus.circle").foregroundStyle(.orange)
-        case .failed: Image(systemName: "xmark.circle.fill").foregroundStyle(.red)
+        case .done: Image(systemName: "checkmark.circle.fill").foregroundStyle(Theme.ok)
+        case .shown: Image(systemName: "terminal").foregroundStyle(Theme.muted)
+        case .skipped: Image(systemName: "minus.circle").foregroundStyle(Theme.review)
+        case .failed: Image(systemName: "xmark.circle.fill").foregroundStyle(Theme.danger)
         case nil:
             if state.phase == .running && isCurrent { ProgressView().controlSize(.mini) } else { Image(systemName: "circle").foregroundStyle(.tertiary) }
         }

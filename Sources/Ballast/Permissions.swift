@@ -20,21 +20,23 @@ struct PermissionsSheet: View {
                 .font(.title3.bold())
             Text("macOS protects this folder. To measure or remove it, allow Ballast in System Settings → Privacy & Security → Full Disk Access.")
             if let path = info.path {
-                Text(path.path).font(.system(.caption, design: .monospaced)).textSelection(.enabled)
+                Text(path.path).font(Theme.mono(.caption)).textSelection(.enabled)
             }
             Text("After an update, macOS may forget this. Turn Ballast off and on again in the list.")
-                .font(.callout).foregroundStyle(.secondary)
+                .font(.callout).foregroundStyle(Theme.muted)
             HStack {
                 Spacer()
-                Button("Not now", action: close).keyboardShortcut(.cancelAction)
+                Button("Not now", action: close).buttonStyle(LineButtonStyle()).keyboardShortcut(.cancelAction)
                 Button("Open System Settings") {
                     NSWorkspace.shared.open(Self.settingsURL)
                     close()
                 }
+                .buttonStyle(BrassButtonStyle())
                 .keyboardShortcut(.defaultAction)
             }
         }
         .padding(20)
         .frame(width: 460)
+        .ballastSurface()
     }
 }

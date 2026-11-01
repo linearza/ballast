@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.5.2 — 2026-11-01
+
+- **A new look.** Ballast now wears the same teal and brass colours as its website, in light and dark mode, following your Mac's appearance. Sizes and paths are set in a monospaced font, headline totals are brass, risk levels (Regenerable, Review, Your data) are coloured tags, and the "Read this first" warning on the confirm sheet stands out more. What Ballast finds and how it removes things hasn't changed.
+
 ## 0.5.1 — 2026-11-01
 
 - **The iPhone tools are built in.** Ballast now carries the programs it uses to talk to an iPhone, so there is nothing to install with Homebrew. Unlock the phone and tap Trust, and it shows up. A build from source without them still looks for the tools on your PATH.
