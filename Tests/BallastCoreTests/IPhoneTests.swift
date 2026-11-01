@@ -225,7 +225,7 @@ final class FakeTransfer: IPhoneMediaTransfer, @unchecked Sendable {
         let runner = FakeRunner(["system_profiler SPUSBDataType -json": FakeRunner.out(usb)])
         let snap = await scan(runner)
         #expect(snap.state == .toolsMissing)
-        #expect(snap.state.message == "To see what's using your iPhone's storage, install libimobiledevice: brew install libimobiledevice ideviceinstaller")
+        #expect(snap.state.message == "This build of Ballast doesn't include the iPhone tools. The download from the releases page does, or you can install them yourself with Homebrew.")
         #expect(snap.items.isEmpty)
         #expect(await IPhoneProvider().isPresent(Fixture().env(runner: runner)))
         let none = FakeRunner(["system_profiler SPUSBDataType -json": FakeRunner.out(#"{"SPUSBDataType":[]}"#)])

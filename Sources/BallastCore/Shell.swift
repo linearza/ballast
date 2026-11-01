@@ -56,9 +56,31 @@ public struct ProcessRunner: CommandRunner {
         return path.split(separator: ":").contains(Substring(bin)) ? path : path + ":" + bin
     }
 
+    /// `Contents/Helpers` when running from an app bundle that ships the iPhone tools.
+    static let helpersDirectory: String? = {
+        let dir = Bundle.main.bundleURL.appending(path: "Contents/Helpers").path
+        var isDirectory: ObjCBool = false
+        return FileManager.default.fileExists(atPath: dir, isDirectory: &isDirectory) && isDirectory.boolValue ? dir : nil
+    }()
+
+    /// The PATH commands run with: the bundled tools first, so they win over whatever the user has installed.
+    /// Without a bundled folder it is the login PATH untouched.
+    static func composePath(login: String, helpers: String?) -> String {
+        guard let helpers else { return login }
+        return ([helpers] + login.split(separator: ":").map(String.init).filter { $0 != helpers }).joined(separator: ":")
+    }
+
+    /// A login shell rebuilds PATH from the user's profile, so the bundled folder is put back in front inside it.
+    static func shellScript(_ script: String, helpers: String?) -> String {
+        guard let helpers else { return script }
+        return "export PATH=\(shellQuote(helpers)):\"$PATH\"; " + script
+    }
+
+    static let path = composePath(login: loginPath, helpers: helpersDirectory)
+
     static var environment: [String: String] {
         var env = ProcessInfo.processInfo.environment
-        env["PATH"] = loginPath
+        env["PATH"] = path
         return env
     }
 
@@ -80,12 +102,12 @@ public struct ProcessRunner: CommandRunner {
     public func shell(_ script: String, timeout: Duration) async -> CommandResult {
         let env = Self.environment
         return await Task.detached {
-            Self.execBlocking(URL(filePath: "/bin/zsh"), ["-lc", script], env: env, timeout: timeout.seconds)
+            Self.execBlocking(URL(filePath: "/bin/zsh"), ["-lc", Self.shellScript(script, helpers: Self.helpersDirectory)], env: env, timeout: timeout.seconds)
         }.value
     }
 
     public func which(_ tool: String) async -> URL? {
-        for dir in Self.loginPath.split(separator: ":") {
+        for dir in Self.path.split(separator: ":") {
             let candidate = URL(filePath: String(dir)).appending(path: tool)
             if FileManager.default.isExecutableFile(atPath: candidate.path) { return candidate }
         }

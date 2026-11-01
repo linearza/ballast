@@ -13,6 +13,26 @@ import Testing
         #expect(shellQuote("") == "''")
     }
 
+    @Test func bundledToolsComeFirstOnThePath() {
+        let path = ProcessRunner.composePath(login: "/opt/homebrew/bin:/usr/bin", helpers: "/A.app/Contents/Helpers")
+        #expect(path == "/A.app/Contents/Helpers:/opt/homebrew/bin:/usr/bin")
+    }
+
+    @Test func bundledFolderIsNeverListedTwice() {
+        let path = ProcessRunner.composePath(login: "/usr/bin:/A.app/Contents/Helpers:/bin", helpers: "/A.app/Contents/Helpers")
+        #expect(path == "/A.app/Contents/Helpers:/usr/bin:/bin")
+    }
+
+    @Test func pathIsUntouchedWithoutAHelpersFolder() {
+        #expect(ProcessRunner.composePath(login: "/usr/bin:/bin", helpers: nil) == "/usr/bin:/bin")
+        #expect(ProcessRunner.helpersDirectory == nil)
+    }
+
+    @Test func loginShellScriptsGetTheHelpersFolderBackInFront() {
+        #expect(ProcessRunner.shellScript("afcclient ls", helpers: nil) == "afcclient ls")
+        #expect(ProcessRunner.shellScript("afcclient ls", helpers: "/My App/Helpers") == "export PATH='/My App/Helpers':\"$PATH\"; afcclient ls")
+    }
+
     @Test func runsEcho() async {
         let r = await ProcessRunner().run(["/bin/echo", "hi"], timeout: .seconds(5))
         #expect(r.stdout == "hi\n")

@@ -17,7 +17,6 @@ public struct IPhoneProvider: Provider {
     static let videoLimit: Int64 = 20_000_000
     static let fileLimit: Int64 = 50_000_000
     static let itemCap = 200
-    static let installHint = "brew install libimobiledevice ideviceinstaller"
     static let paired = ["lockdown", "pair", "trust", "passcode", "password", "locked"]
 
     public func isPresent(_ env: Environment) async -> Bool {
@@ -193,7 +192,7 @@ public enum IPhoneState: Sendable, Equatable {
     public var message: String {
         switch self {
         case .notConnected: "No iPhone connected"
-        case .toolsMissing: "To see what's using your iPhone's storage, install libimobiledevice: \(IPhoneProvider.installHint)"
+        case .toolsMissing: "This build of Ballast doesn't include the iPhone tools. The download from the releases page does, or you can install them yourself with Homebrew."
         case .locked: "Unlock your iPhone and tap Trust"
         case .ready: ""
         case .failed(let why): "Couldn't read the iPhone: \(why)"

@@ -57,12 +57,7 @@ struct IPhoneDetail: View {
             } else {
                 Text(snapshot?.state.message ?? "No iPhone connected").multilineTextAlignment(.center).frame(maxWidth: 420)
                 if snapshot?.state == .toolsMissing {
-                    Text("brew install libimobiledevice ideviceinstaller").font(.system(.callout, design: .monospaced)).textSelection(.enabled)
-                    Button("Copy") {
-                        NSPasteboard.general.clearContents()
-                        NSPasteboard.general.setString("brew install libimobiledevice ideviceinstaller", forType: .string)
-                    }
-                    Text("Ballast never installs it for you.").font(.caption).foregroundStyle(.secondary)
+                    Text("Homebrew: brew install libimobiledevice ideviceinstaller").font(.system(.callout, design: .monospaced)).textSelection(.enabled)
                 }
             }
         }
@@ -77,7 +72,7 @@ struct IPhoneDetail: View {
                 StorageSummary(storage: storage).listRowSeparator(.hidden)
             }
             if !snapshot.missingTools.isEmpty {
-                Label("\(snapshot.missingTools.joined(separator: " and ")) not found, so part of the list is missing. Install libimobiledevice and ideviceinstaller (`brew install libimobiledevice ideviceinstaller`).",
+                Label("\(snapshot.missingTools.joined(separator: " and ")) not found, so part of the list is missing. This build of Ballast is missing part of its iPhone tools; the download from the releases page includes them.",
                       systemImage: "exclamationmark.triangle")
                     .font(.callout).foregroundStyle(.orange)
             }
