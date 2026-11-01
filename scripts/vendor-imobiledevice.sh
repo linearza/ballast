@@ -1,7 +1,10 @@
 #!/bin/sh
 # Builds idevice_id, ideviceinfo, ideviceinstaller and afcclient from pinned upstream
-# tarballs, as universal (arm64 + x86_64) executables that need nothing but macOS itself:
-# every library is linked in statically. Output: .build/vendor/imobiledevice/bin/
+# tarballs, as universal (arm64 + x86_64) executables plus the universal dylibs they share.
+# Nothing is needed beyond macOS itself. Output:
+#   .build/vendor/imobiledevice/bin/  the four tools, rpath @executable_path/../Frameworks
+#   .build/vendor/imobiledevice/lib/  the dylibs, install names @rpath/<name>.dylib
+# bundle.sh puts them in Ballast.app/Contents/Helpers and Contents/Frameworks.
 #
 # Needs: cmake, pkg-config (brew install cmake pkg-config), curl, and the Command Line Tools.
 # Nothing from Homebrew is linked: pkg-config and the compiler only ever see our own prefix.
@@ -11,6 +14,7 @@ set -eu
 root=$(cd "$(dirname "$0")/.." && pwd)
 work=$root/.build/vendor/imobiledevice
 bin=$work/bin
+lib=$work/lib
 min=14.0
 jobs=$(sysctl -n hw.ncpu)
 
@@ -34,6 +38,7 @@ want=$(shasum -a 256 "$0" | cut -d' ' -f1)
 
 if [ -f "$stamp" ] && [ "$(cat "$stamp")" = "$want" ]; then
   ok=1; for t in $tools; do [ -x "$bin/$t" ] || ok=0; done
+  ls "$lib"/*.dylib >/dev/null 2>&1 || ok=0
   if [ "$ok" = 1 ]; then echo "iPhone tools are up to date: $bin"; exit 0; fi
 fi
 
@@ -76,22 +81,22 @@ build_arch() {
   # Only our own prefix is ever searched, never /opt/homebrew or /usr/local.
   unset PKG_CONFIG_PATH LIBRARY_PATH CPATH C_INCLUDE_PATH CPLUS_INCLUDE_PATH DYLD_LIBRARY_PATH
   export PKG_CONFIG_LIBDIR=$prefix/lib/pkgconfig
-  export PKG_CONFIG="pkg-config --static"
+  export PKG_CONFIG=pkg-config
   export CC="clang -arch $arch" CXX="clang++ -arch $arch"
   export CFLAGS="-O2 -mmacosx-version-min=$min -I$prefix/include -ffile-prefix-map=$srcdir=. -ffile-prefix-map=$work=."
   export CXXFLAGS="$CFLAGS"
   export CPPFLAGS="-I$prefix/include"
-  export LDFLAGS="-mmacosx-version-min=$min -L$prefix/lib"
+  export LDFLAGS="-mmacosx-version-min=$min -L$prefix/lib -Wl,-headerpad_max_install_names"
   export MACOSX_DEPLOYMENT_TARGET=$min
 
   echo "==> openssl ($arch)"
   unpack openssl
   (cd "$srcdir/openssl-$(src_of openssl)" &&
-    ./Configure "$ssl_target" no-shared no-tests no-docs no-apps "-mmacosx-version-min=$min" \
+    ./Configure "$ssl_target" shared no-tests no-docs no-apps "-mmacosx-version-min=$min" \
       --prefix="$prefix" --openssldir="$prefix/ssl" >/dev/null &&
     make -j"$jobs" >/dev/null && make install_sw >/dev/null)
 
-  # An autotools library: configure statically, install into the prefix.
+  # An autotools library: configure as a shared library, install into the prefix.
   autotools() {
     name=$1; shift
     echo "==> $name ($arch)"
@@ -99,7 +104,7 @@ build_arch() {
     (cd "$srcdir/$name-$(src_of "$name")" &&
       ac_cv_func_malloc_0_nonnull=yes ac_cv_func_realloc_0_nonnull=yes \
       ./configure --prefix="$prefix" --build="$build_triple" --host="$host_triple" \
-        --enable-static --disable-shared --disable-dependency-tracking "$@" >/dev/null &&
+        --enable-shared --disable-static --disable-dependency-tracking "$@" >/dev/null &&
       make -j"$jobs" >/dev/null && make install >/dev/null)
   }
 
@@ -119,7 +124,7 @@ build_arch() {
       -DCMAKE_OSX_ARCHITECTURES="$arch" -DCMAKE_OSX_DEPLOYMENT_TARGET="$min" \
       -DCMAKE_PREFIX_PATH="$prefix" \
       -DCMAKE_IGNORE_PREFIX_PATH="/opt/homebrew;/usr/local" \
-      -DBUILD_SHARED_LIBS=OFF -DBUILD_TOOLS=OFF -DBUILD_REGRESS=OFF -DBUILD_EXAMPLES=OFF -DBUILD_DOC=OFF \
+      -DBUILD_SHARED_LIBS=ON -DBUILD_TOOLS=OFF -DBUILD_REGRESS=OFF -DBUILD_EXAMPLES=OFF -DBUILD_DOC=OFF \
       -DENABLE_BZIP2=OFF -DENABLE_LZMA=OFF -DENABLE_ZSTD=OFF -DENABLE_OPENSSL=OFF \
       -DENABLE_GNUTLS=OFF -DENABLE_MBEDTLS=OFF -DENABLE_COMMONCRYPTO=OFF >/dev/null &&
     cmake --build build -j"$jobs" >/dev/null && cmake --install build >/dev/null)
@@ -130,19 +135,66 @@ build_arch() {
 
 for arch in arm64 x86_64; do build_arch "$arch"; done
 
-rm -rf "$bin"; mkdir -p "$bin"
-for t in $tools; do
-  a=$work/prefix-arm64/bin/$t; x=$work/prefix-x86_64/bin/$t
-  [ -x "$a" ] && [ -x "$x" ] || { echo "vendor-imobiledevice: $t was not built" >&2; exit 1; }
-  lipo -create "$a" "$x" -output "$bin/$t"
-  strip -x "$bin/$t"
+# Per architecture: copy the tools and dylibs out of the build prefix, strip them, and point every
+# reference at @rpath so nothing mentions the build prefix. Then glue the two architectures together.
+for arch in arm64 x86_64; do
+  prefix=$work/prefix-$arch
+  stage=$work/stage-$arch
+  rm -rf "$stage"; mkdir -p "$stage/bin" "$stage/lib"
+  for t in $tools; do
+    [ -x "$prefix/bin/$t" ] || { echo "vendor-imobiledevice: $t was not built ($arch)" >&2; exit 1; }
+    cp "$prefix/bin/$t" "$stage/bin/"
+  done
+  # Each dylib is filed under the name other code refers to it by (its install name), which is
+  # sometimes a symlink's name such as libzip.5.dylib.
+  for f in "$prefix"/lib/*.dylib; do
+    name=$(basename "$(otool -D "$f" | tail -n 1)")
+    cp -L "$f" "$stage/lib/$name"
+  done
+  for f in "$stage"/bin/* "$stage"/lib/*; do
+    strip -x "$f"
+    otool -l "$f" | awk '/LC_RPATH/ { r = 1 } r && $1 == "path" { print $2; r = 0 }' | grep "^$prefix/" | while read -r rp; do
+      install_name_tool -delete_rpath "$rp" "$f"
+    done
+    case $f in
+      "$stage"/lib/*) install_name_tool -id "@rpath/$(basename "$f")" "$f" ;;
+      *) install_name_tool -add_rpath @executable_path/../Frameworks "$f" ;;
+    esac
+    otool -L "$f" | grep -E '^[[:space:]]' | awk '{ print $1 }' | grep "^$prefix/" | while read -r dep; do
+      install_name_tool -change "$dep" "@rpath/$(basename "$dep")" "$f"
+    done
+  done
+  # Keep only the dylibs the tools actually need, directly or through each other.
+  need=""; todo=$tools
+  : > "$stage/needed"
+  for f in $tools; do echo "bin/$f" >> "$stage/needed"; done
+  while [ -n "$todo" ]; do
+    next=""
+    for f in $todo; do
+      path=$stage/bin/$f; [ -f "$path" ] || path=$stage/lib/$f
+      for dep in $(otool -L "$path" | grep -E '^[[:space:]]+@rpath/' | awk '{ print $1 }' | sed 's|@rpath/||'); do
+        grep -qx "lib/$dep" "$stage/needed" || { echo "lib/$dep" >> "$stage/needed"; next="$next $dep"; }
+      done
+    done
+    todo=$next
+  done
 done
 
-# Nothing may point outside macOS itself.
+rm -rf "$bin" "$lib"; mkdir -p "$bin" "$lib"
 for t in $tools; do
-  lipo -info "$bin/$t" | grep -q 'arm64' && lipo -info "$bin/$t" | grep -q 'x86_64' || { echo "vendor-imobiledevice: $t is not universal" >&2; exit 1; }
-  if otool -L "$bin/$t" | grep -E '^[[:space:]]' | grep -vE '^[[:space:]]+(/usr/lib/|/System/Library/)'; then
-    echo "vendor-imobiledevice: $t links something outside macOS" >&2; exit 1
+  lipo -create "$work/stage-arm64/bin/$t" "$work/stage-x86_64/bin/$t" -output "$bin/$t"
+done
+for entry in $(grep '^lib/' "$work/stage-arm64/needed"); do
+  name=$(basename "$entry")
+  [ -f "$work/stage-x86_64/lib/$name" ] || { echo "vendor-imobiledevice: $name is missing for x86_64" >&2; exit 1; }
+  lipo -create "$work/stage-arm64/lib/$name" "$work/stage-x86_64/lib/$name" -output "$lib/$name"
+done
+
+# Everything must be universal and may only point at @rpath or macOS itself.
+for f in "$bin"/* "$lib"/*; do
+  lipo -info "$f" | grep -q 'arm64' && lipo -info "$f" | grep -q 'x86_64' || { echo "vendor-imobiledevice: $f is not universal" >&2; exit 1; }
+  if otool -L "$f" | grep -E '^[[:space:]]' | grep -vE '^[[:space:]]+(@rpath/|/usr/lib/|/System/Library/)'; then
+    echo "vendor-imobiledevice: $f links something outside macOS" >&2; exit 1
   fi
 done
 

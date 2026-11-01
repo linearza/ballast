@@ -7,7 +7,9 @@ Ballast.app/Contents/Helpers holds four command-line programs that Ballast runs
 to talk to a connected iPhone: idevice_id, ideviceinfo, ideviceinstaller and
 afcclient. Ballast starts them as separate programs and exchanges only command
 lines and text with them. They are built unmodified from the upstream sources
-below, with every library linked in statically.
+below. The libraries are separate dynamic libraries (dylibs) in
+Ballast.app/Contents/Frameworks, which the programs load at run time, so each
+LGPL library can be replaced by your own build of it.
 
   Program / library        Version  Licence
   libplist                 2.8.0    LGPL-2.1-or-later
@@ -38,9 +40,10 @@ distributed, and for at least three years after the version you have:
 
 The exact build, with the SHA-256 of each tarball, is scripts/vendor-imobiledevice.sh
 in the Ballast source: https://github.com/linearza/ballast
-Running it rebuilds these programs from those sources. You are free to replace
-them: Ballast uses whichever program of the same name comes first on its path,
-and a copy you install yourself is used if you delete the one in Contents/Helpers.
+Running it rebuilds these programs and libraries from those sources. To use your
+own build of a library, replace its file in Contents/Frameworks (keep the same
+file name) and sign the app again with: codesign --force --deep -s - Ballast.app
+To use a program you installed yourself, delete the one in Contents/Helpers.
 
 Copyright
 ========================================================================

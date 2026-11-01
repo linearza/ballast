@@ -68,8 +68,8 @@ release: check vendor
 NOTARY_PROFILE ?= ballast
 notarize: release
 	@test -n "$(DEVELOPER_ID)" || { echo 'Set DEVELOPER_ID="Developer ID Application: Your Name (TEAMID)"'; exit 1; }
-	@# Nested executables first, each with the hardened runtime; --deep alone doesn't reliably reach Contents/Helpers.
-	for tool in "$(BUNDLE)"/Contents/Helpers/*; do codesign --force --options runtime --timestamp -s "$(DEVELOPER_ID)" "$$tool"; done
+	@# Nested code first, from the inside out and each with the hardened runtime: dylibs, then tools, then the app.
+	for f in "$(BUNDLE)"/Contents/Frameworks/* "$(BUNDLE)"/Contents/Helpers/*; do codesign --force --options runtime --timestamp -s "$(DEVELOPER_ID)" "$$f"; done
 	codesign --force --deep --options runtime --timestamp --entitlements Resources/Ballast.entitlements -s "$(DEVELOPER_ID)" "$(BUNDLE)"
 	cd $(DIST) && rm -f $(APP)-$(VERSION).zip && ditto -c -k --keepParent $(APP).app $(APP)-$(VERSION).zip
 	xcrun notarytool submit "$(DIST)/$(APP)-$(VERSION).zip" --keychain-profile "$(NOTARY_PROFILE)" --wait

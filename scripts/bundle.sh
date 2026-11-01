@@ -14,13 +14,14 @@ sed -e "s/__VERSION__/$version/g" -e "s#__REPO__#${BALLAST_REPO:-}#g" \
 if [ -f "$root/Resources/AppIcon.icns" ]; then
   cp "$root/Resources/AppIcon.icns" "$bundle/Contents/Resources/"
 fi
-helpers=$root/.build/vendor/imobiledevice/bin
-if [ -x "$helpers/idevice_id" ]; then
-  mkdir -p "$bundle/Contents/Helpers"
-  cp "$helpers"/* "$bundle/Contents/Helpers/"
+vendor=$root/.build/vendor/imobiledevice
+if [ -x "$vendor/bin/idevice_id" ]; then
+  mkdir -p "$bundle/Contents/Helpers" "$bundle/Contents/Frameworks"
+  cp "$vendor"/bin/* "$bundle/Contents/Helpers/"
+  cp "$vendor"/lib/*.dylib "$bundle/Contents/Frameworks/"
   cp "$root/Resources/ThirdPartyNotices.txt" "$bundle/Contents/Resources/"
-  # Nested executables are signed one by one first; --deep alone doesn't reliably reach Contents/Helpers.
-  for tool in "$bundle"/Contents/Helpers/*; do codesign --force -s - "$tool"; done
+  # Nested code is signed from the inside out (dylibs, tools, then the app); --deep alone doesn't reliably reach it.
+  for f in "$bundle"/Contents/Frameworks/* "$bundle"/Contents/Helpers/*; do codesign --force -s - "$f"; done
 else
   echo "bundle.sh: no iPhone tools in this build (run scripts/vendor-imobiledevice.sh); Ballast will look for them on PATH." >&2
 fi
