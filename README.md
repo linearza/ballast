@@ -33,12 +33,12 @@ Old Ruby and Node versions, `node_modules` in projects you forgot about, simulat
 | **AI models** | Ollama, Hugging Face, Whisper, LM Studio, GPT4All, Jan, llama.cpp, DiffusionBee and PyTorch Hub models |
 | **AI tools and editors** | Caches and old workspace data of Cursor, VS Code, Windsurf and the Claude app, old Claude Code versions, and Claude Code history for projects that no longer exist |
 | **Apps** | Your apps with their size and when you last opened them, removed together with their leftovers and background helpers |
-| **Connected iPhone** | What's using an iPhone's storage over USB, its biggest videos and photos (moved to your Mac before they're deleted from the phone) and its apps (uninstalled with their data). Needs libimobiledevice |
+| **Connected iPhone** | What's using an iPhone's storage over USB, its biggest videos and photos (moved to your Mac before they're deleted from the phone) and its apps (uninstalled with their data). It shows up as soon as you plug the phone in |
 | **Large personal files** | The biggest files in your home folder, only when you ask, with files in iCloud Drive marked |
 
 ## A quick tour
 
-The menu bar icon shows free space at a glance. Click it for a summary of the biggest concerns and what's safe to reclaim, or open the main window to review and remove things.
+The menu bar icon shows free space at a glance. Click it for a summary of the biggest concerns and what's safe to reclaim, plus a connected iPhone's storage, or open the main window to review and remove things. Only one copy of Ballast runs at a time: opening it again brings up the window of the one already running.
 
 <p align="center">
 <picture>
@@ -109,7 +109,7 @@ Ballast asks for nothing up front. It reads your home folder like any app you ru
 - **Full Disk Access** is only needed for protected locations (some app containers and the Docker disk image). Ballast shows those items as locked and explains how to grant access if you want them measured.
 - **Administrator steps,** such as removing Docker's system helpers, are never run for you. Ballast shows the exact `sudo` command for you to run in Terminal.
 - **Finder** is used to empty the Trash, so macOS asks whether Ballast can control Finder the first time you click Empty Trash. If you said no, Ballast offers to open **Privacy & Security → Automation** so you can allow it.
-- **Your iPhone** is read with libimobiledevice, which is optional and only needed for this: `brew install libimobiledevice ideviceinstaller`. Ballast never installs it. The iPhone has to be unlocked and trusted. Moving videos and photos goes through Image Capture, so macOS may ask whether Ballast can open the iPhone's photos the first time; if you said no, Ballast offers to open **Privacy & Security**.
+- **Your iPhone** is read with libimobiledevice, whose tools are built into Ballast, so there is nothing to install. The iPhone has to be unlocked and trusted. Moving videos and photos goes through Image Capture, so macOS may ask whether Ballast can open the iPhone's photos the first time; if you said no, Ballast offers to open **Privacy & Security**.
 - **The network** is used for two things only: a daily check of GitHub for a newer Ballast, and, if you have the GitHub CLI (`gh`) signed in, asking GitHub whether a worktree's pull request is merged.
 
 ## Install
@@ -125,6 +125,8 @@ make install
 ```
 
 This builds Ballast, copies it to `~/Applications` and opens it.
+
+The iPhone tools are built from source on the way, which takes a few minutes the first time and needs `cmake` and `pkg-config` (`brew install cmake pkg-config`). Without them the app still builds and looks for the tools on your PATH instead. `make release` always builds them.
 
 If the build stops at `Invalid manifest` with `Undefined symbols … PackageDescription.Package`, your Swift compiler and its package library come from different versions of the Command Line Tools, usually after a macOS update. Reinstall them and build again:
 
@@ -183,7 +185,6 @@ make test      # run the tests
 make app       # build dist/Ballast.app
 make icon      # re-render Resources/AppIcon.icns
 make release   # universal build and dist/Ballast-<version>.zip
-make notarize DEVELOPER_ID="Developer ID Application: …"  # sign and notarise the release (needs an Apple Developer account)
 make screenshots  # re-render docs/screenshots from sample data
 ```
 
@@ -194,3 +195,11 @@ The scanning and cleanup logic lives in `Sources/BallastCore` and is tested agai
 ## Licence
 
 MIT
+
+### Official builds
+
+The only official Ballast is the one on this repository's [Releases](https://github.com/linearza/ballast/releases) page, built and published by its maintainer. The MIT licence lets you build, change and share your own copy. If you distribute a modified build, give it a different name, icon and bundle identifier (not `za.co.linear.ballast`), so nobody mistakes it for Ballast or gets it replaced by a Ballast update.
+
+### Third-party software
+
+The release download carries four command-line tools in `Ballast.app/Contents/Helpers` (`idevice_id`, `ideviceinfo`, `ideviceinstaller`, `afcclient`) to talk to an iPhone. They are built unmodified from the upstream libimobiledevice projects (libimobiledevice, libplist, libusbmuxd, libimobiledevice-glue, libtatsu and ideviceinstaller, under LGPL-2.1 or GPL-2), with libzip (BSD-3-Clause) and OpenSSL (Apache-2.0). The libraries are separate dylibs in `Ballast.app/Contents/Frameworks` that the tools load at run time rather than copies linked into them, so you can swap in your own build of any of them. Ballast runs them as separate programs and only talks to them through their command lines. The licence texts and a written offer of the source are in `Ballast.app/Contents/Resources/ThirdPartyNotices.txt`, and `scripts/vendor-imobiledevice.sh` builds them from the exact upstream tarballs, pinned by checksum.

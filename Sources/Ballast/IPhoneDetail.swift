@@ -57,12 +57,7 @@ struct IPhoneDetail: View {
             } else {
                 Text(snapshot?.state.message ?? "No iPhone connected").multilineTextAlignment(.center).frame(maxWidth: 420)
                 if snapshot?.state == .toolsMissing {
-                    Text("brew install libimobiledevice ideviceinstaller").font(.system(.callout, design: .monospaced)).textSelection(.enabled)
-                    Button("Copy") {
-                        NSPasteboard.general.clearContents()
-                        NSPasteboard.general.setString("brew install libimobiledevice ideviceinstaller", forType: .string)
-                    }
-                    Text("Ballast never installs it for you.").font(.caption).foregroundStyle(.secondary)
+                    Text("Homebrew: brew install libimobiledevice ideviceinstaller").font(.system(.callout, design: .monospaced)).textSelection(.enabled)
                 }
             }
         }
@@ -77,7 +72,7 @@ struct IPhoneDetail: View {
                 StorageSummary(storage: storage).listRowSeparator(.hidden)
             }
             if !snapshot.missingTools.isEmpty {
-                Label("\(snapshot.missingTools.joined(separator: " and ")) not found, so part of the list is missing. Install libimobiledevice and ideviceinstaller (`brew install libimobiledevice ideviceinstaller`).",
+                Label("\(snapshot.missingTools.joined(separator: " and ")) not found, so part of the list is missing. This build of Ballast is missing part of its iPhone tools; the download from the releases page includes them.",
                       systemImage: "exclamationmark.triangle")
                     .font(.callout).foregroundStyle(.orange)
             }
@@ -146,9 +141,10 @@ struct IPhoneDetail: View {
     }
 }
 
-/// A stacked bar of how the iPhone's storage is used, a legend, and what the bar can't tell.
-struct StorageSummary: View {
+/// The stacked bar of how an iPhone's storage is used, shared by the detail view and the menu.
+struct StorageBar: View {
     let storage: IPhoneStorage
+    var height: CGFloat = 16
 
     static func color(_ part: IPhoneStorage.Part) -> Color {
         switch part {
@@ -163,31 +159,74 @@ struct StorageSummary: View {
     var body: some View {
         let parts = storage.parts
         let total = max(1, parts.reduce(0) { $0 + $1.bytes })
-        return VStack(alignment: .leading, spacing: 8) {
-            GeometryReader { geo in
-                HStack(spacing: 1) {
-                    ForEach(parts, id: \.part) { p in
-                        Rectangle().fill(Self.color(p.part)).frame(width: max(0, geo.size.width * Double(p.bytes) / Double(total)))
-                    }
+        let radius = height / 3
+        let gaps = Double(max(0, parts.count - 1))  // the 1pt gaps between segments come out of the width
+        return GeometryReader { geo in
+            HStack(spacing: 1) {
+                ForEach(parts, id: \.part) { p in
+                    Rectangle().fill(Self.color(p.part)).frame(width: max(0, (geo.size.width - gaps) * Double(p.bytes) / Double(total)))
                 }
-                .clipShape(RoundedRectangle(cornerRadius: 5))
-                .overlay(RoundedRectangle(cornerRadius: 5).strokeBorder(Color.secondary.opacity(0.3)))
             }
-            .frame(height: 16)
-            HStack(spacing: 16) {
+            .clipShape(RoundedRectangle(cornerRadius: radius))
+            .overlay(RoundedRectangle(cornerRadius: radius).strokeBorder(Color.secondary.opacity(0.3)))
+        }
+        .frame(height: height)
+    }
+}
+
+/// A stacked bar of how the iPhone's storage is used, a legend, and what the bar can't tell.
+struct StorageSummary: View {
+    let storage: IPhoneStorage
+
+    var body: some View {
+        let parts = storage.parts
+        return VStack(alignment: .leading, spacing: 8) {
+            StorageBar(storage: storage)
+            WrappingLayout(horizontalSpacing: 16, verticalSpacing: 6) {
                 ForEach(parts, id: \.part) { p in
                     HStack(spacing: 5) {
-                        Circle().fill(Self.color(p.part)).overlay(Circle().strokeBorder(Color.secondary.opacity(0.4))).frame(width: 9, height: 9)
+                        Circle().fill(StorageBar.color(p.part)).overlay(Circle().strokeBorder(Color.secondary.opacity(0.4))).frame(width: 9, height: 9)
                         Text(p.part.rawValue)
                         Text(formatBytes(p.bytes)).monospacedDigit().foregroundStyle(.secondary)
                     }
                     .font(.caption)
+                    .fixedSize()
                 }
             }
-            .fixedSize(horizontal: false, vertical: true)
             Text("Not visible over USB: " + IPhoneStorage.notVisibleNote)
                 .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
         }
         .padding(.vertical, 6)
+    }
+}
+
+/// Flows its subviews left to right and wraps them onto new lines when the row is full.
+struct WrappingLayout: Layout {
+    var horizontalSpacing: CGFloat = 16
+    var verticalSpacing: CGFloat = 6
+
+    private func arrange(_ subviews: Subviews, width: CGFloat) -> (frames: [CGRect], size: CGSize) {
+        var frames: [CGRect] = []
+        var x: CGFloat = 0, y: CGFloat = 0, lineHeight: CGFloat = 0, maxX: CGFloat = 0
+        for v in subviews {
+            let s = v.sizeThatFits(.unspecified)
+            if x > 0, x + s.width > width { x = 0; y += lineHeight + verticalSpacing; lineHeight = 0 }
+            frames.append(CGRect(origin: CGPoint(x: x, y: y), size: s))
+            x += s.width + horizontalSpacing
+            lineHeight = max(lineHeight, s.height)
+            maxX = max(maxX, x - horizontalSpacing)
+        }
+        return (frames, CGSize(width: maxX, height: y + lineHeight))
+    }
+
+    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
+        arrange(subviews, width: proposal.width ?? .infinity).size
+    }
+
+    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
+        let r = arrange(subviews, width: bounds.width)
+        for (v, f) in zip(subviews, r.frames) {
+            v.place(at: CGPoint(x: bounds.minX + f.minX, y: bounds.minY + f.minY), proposal: .unspecified)
+        }
     }
 }
