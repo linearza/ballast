@@ -84,7 +84,7 @@ struct ConfirmSheet: View {
                 case .running:
                     ProgressView().controlSize(.small)
                 case .finished:
-                    if state.trashed > 0 { Button("Empty Trash") { Task { await model.emptyTrash() } }.buttonStyle(LineButtonStyle()) }
+                    if state.trashed > 0 { Button("Empty Trash") { Task { await model.emptyTrash() } }.buttonStyle(DangerButtonStyle()) }
                     Button("Close") { model.run = nil }.buttonStyle(BrassButtonStyle()).keyboardShortcut(.defaultAction)
                 }
             }
@@ -98,7 +98,7 @@ struct ConfirmSheet: View {
         Button("\(state.provider.id == "iphone" ? "Go ahead" : "Remove") · \(formatBytes(state.plan.expectedBytes))", role: state.level == .dangerous ? .destructive : nil) {
             Task { await model.execute(state) }
         }
-        .buttonStyle(BrassButtonStyle(danger: state.level == .dangerous))
+        .buttonStyle(DangerButtonStyle())
         .disabled(!state.canRemove)
     }
 

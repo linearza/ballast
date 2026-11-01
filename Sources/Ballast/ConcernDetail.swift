@@ -39,7 +39,7 @@ struct ConcernDetail: View {
             Spacer()
             if let provider, let report {
                 ForEach(provider.extraActions(report.items)) { action in
-                    Button(action.title) { Task { await model.prepare(concern: concernID, ids: [action.id]) } }.buttonStyle(LineButtonStyle())
+                    Button(action.title) { Task { await model.prepare(concern: concernID, ids: [action.id]) } }.buttonStyle(DangerButtonStyle(outline: true))
                 }
             }
             Button("Rescan") { Task { await model.scanNow(only: [concernID]) } }
@@ -96,19 +96,20 @@ struct ConcernDetail: View {
             .width(90)
         }
         .alternatingRowBackgrounds(.disabled)
+        .background(TableHeaderSkin())
         .ballastList()
     }
 
     var bottomBar: some View {
         let chosen = items.filter { checked.contains($0.id) }
         return HStack {
-            Button("Select safe") { model.checked[concernID] = selectSafe(items) }.buttonStyle(LineButtonStyle())
-            Button("Select none") { model.checked[concernID] = [] }.buttonStyle(LineButtonStyle()).disabled(chosen.isEmpty)
+            Button("Select safe") { model.checked[concernID] = selectSafe(items) }.buttonStyle(LineButtonStyle()).controlSize(.small)
+            Button("Select none") { model.checked[concernID] = [] }.buttonStyle(LineButtonStyle()).controlSize(.small).disabled(chosen.isEmpty)
             Spacer()
             Button(removeLabel(count: chosen.count, bytes: chosen.reduce(0) { $0 + $1.bytes })) {
                 Task { await model.prepare(concern: concernID, ids: chosen.map(\.id)) }
             }
-            .buttonStyle(BrassButtonStyle())
+            .buttonStyle(DangerButtonStyle())
             .keyboardShortcut(.defaultAction)
             .disabled(chosen.isEmpty)
         }

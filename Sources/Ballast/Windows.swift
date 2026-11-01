@@ -31,12 +31,21 @@ import SwiftUI
         let w = NSWindow(contentRect: NSRect(origin: .zero, size: size), styleMask: style, backing: .buffered, defer: false)
         w.title = title
         w.isReleasedWhenClosed = false
-        w.backgroundColor = NSColor(Theme.bg)
+        Self.skin(w)
         w.contentViewController = NSHostingController(rootView: content)
         w.setContentSize(size)
         w.center()
         w.delegate = self
         return w
+    }
+
+    /// Themes the title bar: transparent over the window colour, with the content running underneath it, so the
+    /// strip is the sidebar colour over the sidebar and the detail colour over the detail. The traffic lights,
+    /// title and drag-by-title-bar stay native. Shared with the screenshot renderer so both draw the same window.
+    static func skin(_ w: NSWindow) {
+        w.styleMask.insert(.fullSizeContentView)
+        w.titlebarAppearsTransparent = true
+        w.backgroundColor = NSColor(Theme.bg)
     }
 
     /// Ballast lives in the menu bar, but shows in the Dock and app switcher while one of its windows is open.

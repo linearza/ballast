@@ -140,7 +140,8 @@ struct Popover: View {
                 Text(formatBytes(bytes)).font(Theme.mono()).foregroundStyle(Theme.muted)
             }
             Button("Empty") { Task { await model.emptyTrash() } }
-                .buttonStyle(LineButtonStyle())
+                .buttonStyle(DangerButtonStyle(outline: true))
+                .controlSize(.small)
                 .disabled(model.trashBytes == 0)
         }
     }
@@ -149,8 +150,8 @@ struct Popover: View {
         HStack {
             if model.scanning { ProgressView().controlSize(.small) }
             Spacer()
-            Button("Scan now") { Task { await model.scanNow() } }.buttonStyle(LineButtonStyle()).disabled(model.scanning)
-            Button("Open Ballast") { open(nil) }.buttonStyle(BrassButtonStyle())
+            Button("Scan now") { Task { await model.scanNow() } }.buttonStyle(LineButtonStyle()).controlSize(.small).disabled(model.scanning)
+            Button("Open Ballast") { open(nil) }.buttonStyle(BrassButtonStyle()).controlSize(.small)
             Menu {
                 Text("Ballast \(model.updates.current)")  // disabled: it only says which version this is
                 Divider()
