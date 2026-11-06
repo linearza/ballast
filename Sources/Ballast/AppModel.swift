@@ -173,28 +173,48 @@ import UserNotifications
         if let delay = IPhoneWatch.lockedRetryDelay(afterAttempt: lockedAttempts) { queueIPhoneRescan(after: delay) }
     }
 
-    func measureTrash() async {
+    /// Passive refreshes (launch, scans) never prompt; only the user clicking Empty may.
+    func measureTrash(_ reason: TrashRefresh = .passive) async {
         let folder = FileManager.default.homeDirectoryForCurrentUser.appending(path: ".Trash")
         // Without Full Disk Access the folder can't be read, so Finder is asked (read-only, via Automation).
-        trash = await trashState(at: folder) { await MainActor.run { Self.askFinderAboutTrash() } }
+        trash = await trashState(at: folder, reason: reason, finderGranted: { Self.finderAutomationGranted() }) {
+            await Self.askFinderAboutTrash()
+        }
     }
 
-    /// Item count and size from Finder. Nil if Finder won't say (e.g. Automation was refused).
-    private static func askFinderAboutTrash() -> FinderTrash? {
-        let source = """
-        tell application "Finder"
-            set n to count of items of trash
-            set s to missing value
-            try
-                set s to physical size of trash
-            end try
-            return (n as text) & ", " & (s as text)
-        end tell
-        """
-        var error: NSDictionary?
-        guard let reply = NSAppleScript(source: source)?.executeAndReturnError(&error), error == nil,
-              let text = reply.stringValue else { return nil }
-        return FinderTrash.parse(text)
+    /// True only if Ballast may already control Finder and Finder is running. Never prompts and never launches Finder.
+    nonisolated private static func finderAutomationGranted() -> Bool {
+        let id = "com.apple.finder"
+        guard !NSRunningApplication.runningApplications(withBundleIdentifier: id).isEmpty else { return false }
+        let target = NSAppleEventDescriptor(bundleIdentifier: id)
+        return AEDeterminePermissionToAutomateTarget(target.aeDesc, typeWildCard, typeWildCard, false) == noErr
+    }
+
+    /// Item count and size from Finder, on a background thread so a big Trash can't freeze the popover.
+    /// Each Apple event is cut off after 5 seconds; the count survives if only the size times out.
+    /// Nil if Finder won't say (e.g. Automation was refused).
+    nonisolated private static func askFinderAboutTrash() async -> FinderTrash? {
+        await withCheckedContinuation { cont in
+            Thread.detachNewThread {
+                let source = """
+                tell application "Finder"
+                    with timeout of 5 seconds
+                        set n to count of items of trash
+                    end timeout
+                    set s to missing value
+                    try
+                        with timeout of 5 seconds
+                            set s to physical size of trash
+                        end timeout
+                    end try
+                    return (n as text) & ", " & (s as text)
+                end tell
+                """
+                var error: NSDictionary?
+                let reply = NSAppleScript(source: source)?.executeAndReturnError(&error)
+                cont.resume(returning: error == nil ? reply?.stringValue.flatMap(FinderTrash.parse) : nil)
+            }
+        }
     }
 
     static let automationSettingsURL = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Automation")!
@@ -202,7 +222,7 @@ import UserNotifications
     /// Asks first, then has Finder empty the Trash.
     func emptyTrash() async {
         NSApp.activate(ignoringOtherApps: true)
-        await measureTrash()
+        await measureTrash(.clicked)
         guard trash != .empty else { return }
         let alert = NSAlert()
         alert.messageText = "Empty the Trash?"
@@ -217,7 +237,7 @@ import UserNotifications
         var error: NSDictionary?
         NSAppleScript(source: "tell application \"Finder\" to empty trash")?.executeAndReturnError(&error)
         // Finder errors when there's nothing to empty; if it's empty now, that's the outcome we wanted.
-        if error != nil { await measureTrash() }
+        if error != nil { await measureTrash(.clicked) }
         if let error, trash.shouldReportFailure {
             let failed = NSAlert()
             failed.messageText = "Couldn't empty the Trash"
@@ -233,7 +253,7 @@ import UserNotifications
             }
         }
         refreshSpace()
-        await measureTrash()
+        await measureTrash(.clicked)
     }
 
     /// Checks hourly for updates, and scans in the background when the last summary is older than the interval.

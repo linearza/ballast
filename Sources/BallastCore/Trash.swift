@@ -30,14 +30,30 @@ public struct FinderTrash: Sendable, Equatable {
     }
 }
 
-/// Reads the Trash folder; when macOS won't let us, asks `finder` instead (only then).
-public func trashState(at folder: URL, finder: @Sendable () async -> FinderTrash?) async -> TrashState {
+/// Why the Trash is being looked at.
+public enum TrashRefresh: Sendable {
+    /// Launch or a scan: must never make macOS show an Automation prompt.
+    case passive
+    /// The user clicked Empty, so a prompt is expected.
+    case clicked
+}
+
+/// Whether Finder may be asked about the Trash. A passive look only asks when the permission is already granted.
+public func mayAskFinder(_ reason: TrashRefresh, granted: Bool) -> Bool {
+    reason == .clicked || granted
+}
+
+/// Reads the Trash folder; when macOS won't let us, asks `finder` instead (only then, and only if `mayAskFinder`).
+/// `finderGranted` is called only for a passive look.
+public func trashState(at folder: URL, reason: TrashRefresh, finderGranted: @Sendable () -> Bool,
+                       finder: @Sendable () async -> FinderTrash?) async -> TrashState {
     if let names = try? FileManager.default.contentsOfDirectory(atPath: folder.path) {
         // Finder hides .DS_Store, so an otherwise empty Trash with one is still empty.
         let items = names.filter { $0 != ".DS_Store" }
         if items.isEmpty { return .empty }
         return .full(bytes: await measure([folder]).bytes, items: items.count)
     }
+    guard mayAskFinder(reason, granted: reason == .clicked || finderGranted()) else { return .unknown }
     guard let found = await finder() else { return .unknown }
     return found.items == 0 ? .empty : .full(bytes: found.bytes, items: found.items)
 }
