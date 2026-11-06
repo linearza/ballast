@@ -40,14 +40,16 @@ private func group(_ id: String, percent: Int) -> MemoryGroup {
     }
 
     @Test func jumpGoesRed() {
-        var fast = MemoryWatch()
-        fast.update(system: sys(usedPercent: 20), pressure: .normal, topGroupBytes: nil, now: t0)
-        fast.update(system: sys(usedPercent: 45), pressure: .normal, topGroupBytes: nil, now: t0.addingTimeInterval(60))
-        #expect(fast.isRed)
-        var slow = MemoryWatch()
-        slow.update(system: sys(usedPercent: 20), pressure: .normal, topGroupBytes: nil, now: t0)
-        slow.update(system: sys(usedPercent: 45), pressure: .normal, topGroupBytes: nil, now: t0.addingTimeInterval(300))
-        #expect(!slow.isRed)
+        func run(from: Int, to: Int, seconds: Double) -> Bool {
+            var w = MemoryWatch()
+            w.update(system: sys(usedPercent: from), pressure: .normal, topGroupBytes: nil, now: t0)
+            w.update(system: sys(usedPercent: to), pressure: .normal, topGroupBytes: nil, now: t0.addingTimeInterval(seconds))
+            return w.isRed
+        }
+        #expect(run(from: 77, to: 92, seconds: 60))     // fast, and ends nearly full
+        #expect(!run(from: 30, to: 55, seconds: 60))    // fast but ends with plenty free
+        #expect(!run(from: 77, to: 92, seconds: 300))   // ends nearly full but too slow
+        #expect(!run(from: 80, to: 90, seconds: 60))    // ends nearly full but only 10 points
     }
 
     @Test func staysRedAtLeastAMinute() {
@@ -79,8 +81,8 @@ private func group(_ id: String, percent: Int) -> MemoryGroup {
         #expect(w.needsBreakdown(system: sys(usedPercent: 50), pressure: .normal, now: t0))
         #expect(w.needsBreakdown(system: sys(usedPercent: 30), pressure: .warning, now: t0))
         var j = MemoryWatch()
-        j.update(system: sys(usedPercent: 5), pressure: .normal, topGroupBytes: nil, now: t0)
-        #expect(j.needsBreakdown(system: sys(usedPercent: 35), pressure: .normal, now: t0.addingTimeInterval(30)))
+        j.update(system: sys(usedPercent: 40), pressure: .normal, topGroupBytes: nil, now: t0)
+        #expect(!j.needsBreakdown(system: sys(usedPercent: 49), pressure: .normal, now: t0.addingTimeInterval(30)))
     }
 
     @Test func breakdownRunsWhileRedAndHoldsTheBand() {
@@ -95,13 +97,13 @@ private func group(_ id: String, percent: Int) -> MemoryGroup {
 
     @Test func frequentUpdatesDoNotEvictTheJumpBaseline() {
         var w = MemoryWatch()
-        w.update(system: sys(usedPercent: 5), pressure: .normal, topGroupBytes: nil, now: t0)
+        w.update(system: sys(usedPercent: 70), pressure: .normal, topGroupBytes: nil, now: t0)
         for i in 1...10 {
-            w.update(system: sys(usedPercent: 20), pressure: .normal, topGroupBytes: nil, now: t0.addingTimeInterval(Double(i)))
+            w.update(system: sys(usedPercent: 80), pressure: .normal, topGroupBytes: nil, now: t0.addingTimeInterval(Double(i)))
         }
         #expect(!w.isRed)
-        // 25 points above the baseline, only 10 above the fillers.
-        w.update(system: sys(usedPercent: 30), pressure: .normal, topGroupBytes: nil, now: t0.addingTimeInterval(100))
+        // 20 points above the baseline and ending at 90%, but only 10 above the fillers.
+        w.update(system: sys(usedPercent: 90), pressure: .normal, topGroupBytes: nil, now: t0.addingTimeInterval(100))
         #expect(w.isRed)
     }
 

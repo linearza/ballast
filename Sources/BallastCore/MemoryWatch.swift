@@ -3,8 +3,9 @@ import Foundation
 // Thresholds. Percentages are of physical memory.
 private let redShareOfPhysical = 50          // top group at or above this goes red
 private let clearShareOfPhysical = 40        // top group must fall below this to clear
-private let jumpShareOfPhysical = 25         // used rising by this much...
-private let jumpWindowSeconds: TimeInterval = 120  // ...within this many seconds is a jump
+private let jumpRiseShareOfPhysical = 15     // used rising by this much...
+private let jumpWindowSeconds: TimeInterval = 120  // ...within this many seconds...
+private let jumpEndsAtUsedPercent = 85       // ...and ending at or above this much used is a jump
 private let minimumRedSeconds: TimeInterval = 60   // stays red at least this long
 private let minimumTotalsSpacing: TimeInterval = 20  // extra readings closer than this aren't stored
 private let totalsWindowSize = 5             // readings of "used" kept, nothing more
@@ -29,7 +30,8 @@ public struct MemoryWatch: Sendable {
 
     private func hasJump(system: SystemMemory, now: Date) -> Bool {
         guard system.physical > 0 else { return false }
-        let needed = system.physical * Int64(jumpShareOfPhysical)
+        guard system.used * 100 >= system.physical * Int64(jumpEndsAtUsedPercent) else { return false }
+        let needed = system.physical * Int64(jumpRiseShareOfPhysical)
         return totals.contains { t in
             let age = now.timeIntervalSince(t.at)
             return age >= 0 && age <= jumpWindowSeconds && (system.used - t.used) * 100 >= needed
