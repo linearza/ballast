@@ -142,7 +142,7 @@ import SwiftUI
         ]
         model.free = 61 * gb
         model.total = 494 * gb
-        model.trashBytes = 1_800 * mb
+        model.trash = .full(bytes: 1_800 * mb, items: 12)
         model.summary = Summary(reports: model.reports, freeBytes: model.free, totalBytes: model.total, scannedAt: now - 3 * 3600)
         model.prefs.projectRoots = [home + "/Code", home + "/Work"].map { $0.replacingOccurrences(of: home, with: NSHomeDirectory()) }
         model.prefs.rootsConfirmed = true

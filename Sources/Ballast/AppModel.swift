@@ -10,8 +10,7 @@ import UserNotifications
     var scanningIDs: Set<String> = []
     var free: Int64 = 0
     var total: Int64 = 0
-    /// Nil when macOS won't let Ballast read the Trash.
-    var trashBytes: Int64?
+    var trash: TrashState = .unknown
     /// The concern the main window shows.
     var selection: String?
     /// Ticked items, per concern.
@@ -175,8 +174,27 @@ import UserNotifications
     }
 
     func measureTrash() async {
-        let m = await measure([FileManager.default.homeDirectoryForCurrentUser.appending(path: ".Trash")])
-        trashBytes = m.partial && m.bytes == 0 ? nil : m.bytes
+        let folder = FileManager.default.homeDirectoryForCurrentUser.appending(path: ".Trash")
+        // Without Full Disk Access the folder can't be read, so Finder is asked (read-only, via Automation).
+        trash = await trashState(at: folder) { await MainActor.run { Self.askFinderAboutTrash() } }
+    }
+
+    /// Item count and size from Finder. Nil if Finder won't say (e.g. Automation was refused).
+    private static func askFinderAboutTrash() -> FinderTrash? {
+        let source = """
+        tell application "Finder"
+            set n to count of items of trash
+            set s to missing value
+            try
+                set s to physical size of trash
+            end try
+            return (n as text) & ", " & (s as text)
+        end tell
+        """
+        var error: NSDictionary?
+        guard let reply = NSAppleScript(source: source)?.executeAndReturnError(&error), error == nil,
+              let text = reply.stringValue else { return nil }
+        return FinderTrash.parse(text)
     }
 
     static let automationSettingsURL = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Automation")!
@@ -184,6 +202,8 @@ import UserNotifications
     /// Asks first, then has Finder empty the Trash.
     func emptyTrash() async {
         NSApp.activate(ignoringOtherApps: true)
+        await measureTrash()
+        guard trash != .empty else { return }
         let alert = NSAlert()
         alert.messageText = "Empty the Trash?"
         alert.informativeText = "Everything in the Trash is deleted for good, including things you put there before. This can't be undone."
@@ -196,7 +216,9 @@ import UserNotifications
         guard alert.runModal() == .alertFirstButtonReturn else { return }
         var error: NSDictionary?
         NSAppleScript(source: "tell application \"Finder\" to empty trash")?.executeAndReturnError(&error)
-        if let error {
+        // Finder errors when there's nothing to empty; if it's empty now, that's the outcome we wanted.
+        if error != nil { await measureTrash() }
+        if let error, trash.shouldReportFailure {
             let failed = NSAlert()
             failed.messageText = "Couldn't empty the Trash"
             // -1743: the user (or macOS, for an app without a usage description) said no to controlling Finder.
