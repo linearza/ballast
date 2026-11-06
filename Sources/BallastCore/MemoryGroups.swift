@@ -83,6 +83,43 @@ private func toolName(in args: [String]) -> String? {
     return found
 }
 
+/// What a short, useful label for one process is: its title or tool or script, not just `node`.
+public func processLabel(_ p: ProcessSample) -> String {
+    let exe = p.path.map(lastComponent) ?? "unknown"
+    guard runtimeNames.contains(exe) else { return exe }
+    if let title = processTitle(of: p) { return title }
+    if let tool = toolName(in: p.args) { return tool }
+    if let script = p.args.dropFirst().first(where: { !$0.isEmpty && !$0.hasPrefix("-") }) { return "\(exe) \(lastComponent(script))" }
+    return exe
+}
+
+/// A path with the home folder shown as `~`.
+public func abbreviatingHome(_ path: String, home: String) -> String {
+    guard !home.isEmpty, home != "/" else { return path }
+    if path == home { return "~" }
+    return path.hasPrefix(home + "/") ? "~" + path.dropFirst(home.count) : path
+}
+
+/// The name a runtime process gave itself (`process.title = ...`), or nil when it kept its own argv.
+/// A real argv[0] is a path or the bare runtime name; anything else is a title.
+private func processTitle(of p: ProcessSample) -> String? {
+    guard let first = p.args.first, !first.isEmpty, !first.contains("/") else { return nil }
+    let exe = p.path.map(lastComponent) ?? ""
+    if first == exe || runtimeNames.contains(first) { return nil }
+    var name = first
+    if first.hasPrefix("node (") {
+        let inner = first.dropFirst("node (".count)
+        name = String(inner.prefix(while: { $0 != ")" }))
+        // "vitest 1" -> "vitest": the worker number is not part of the name.
+        let words = name.split(separator: " ")
+        if words.count > 1, words.last.map({ $0.allSatisfy(\.isNumber) }) == true { name = words.dropLast().joined(separator: " ") }
+    } else {
+        name = String(first.split(separator: " ").first ?? "")
+    }
+    while name.hasSuffix(":") { name.removeLast() }
+    return name.isEmpty ? nil : name
+}
+
 private func identity(of p: ProcessSample) -> (id: String, name: String) {
     guard let path = p.path else { return ("unknown", "Unknown process") }
     let components = path.split(separator: "/", omittingEmptySubsequences: true)
@@ -94,9 +131,14 @@ private func identity(of p: ProcessSample) -> (id: String, name: String) {
     }
     let exe = lastComponent(path)
     if runtimeNames.contains(exe) {
-        if let tool = toolName(in: p.args) { return ("tool:\(tool)", tool) }
-        if let cwd = p.cwd, !cwd.isEmpty, cwd != "/" {
-            return ("runtime:\(exe):\(cwd)", "\(exe) · \(lastComponent(cwd))")
+        let folder = p.cwd.flatMap { $0.isEmpty || $0 == "/" ? nil : $0 }
+        // Tools are per folder: "vitest" in one worktree is not "vitest" in another, or in CI.
+        if let tool = processTitle(of: p) ?? toolName(in: p.args) {
+            guard let folder else { return ("tool:\(tool)", tool) }
+            return ("tool:\(tool):\(folder)", "\(tool) · \(lastComponent(folder))")
+        }
+        if let folder {
+            return ("runtime:\(exe):\(folder)", "\(exe) · \(lastComponent(folder))")
         }
         return ("runtime:\(exe)", exe)
     }

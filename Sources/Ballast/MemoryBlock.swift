@@ -158,8 +158,11 @@ struct MemoryBlock: View {
 
     private func confirm(_ group: MemoryGroup, skipped: Int, listing: [ProcessSample]? = nil) -> Bool {
         let shown = (listing ?? group.processes).sorted { $0.footprint > $1.footprint }
+        let home = NSHomeDirectory()
         var lines = shown.prefix(10).map { p in
-            "\(p.path.map { String($0.split(separator: "/").last ?? "") } ?? "unknown") (\(p.pid)) · \(formatBytes(p.footprint))"
+            var line = "\(processLabel(p)) (\(p.pid)) · \(formatBytes(p.footprint))"
+            if let cwd = p.cwd, !cwd.isEmpty { line += " · \(abbreviatingHome(cwd, home: home))" }
+            return line
         }
         if shown.count > 10 { lines.append("and \(shown.count - 10) more") }
         var text = lines.joined(separator: "\n") + "\n\nAnything you haven't saved in \(group.name) will be lost."

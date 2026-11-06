@@ -36,12 +36,21 @@ public struct LiveMemoryReader: MemoryReading {
         let bytes = proc_listallpids(&pids, Int32(pids.count * MemoryLayout<Int32>.stride))
         guard bytes > 0 else { return [] }
         let n = min(Int(bytes), pids.count)  // proc_listallpids returns a pid count, not bytes
-        return pids.prefix(n).filter { $0 > 0 }.compactMap { Self.sample(pid: $0) }
+        var pathBuf = [CChar](repeating: 0, count: Self.pathBufferSize)
+        return pids.prefix(n).filter { $0 > 0 }.compactMap { Self.sample(pid: $0, pathBuf: &pathBuf) }
     }
+
+    private static let pathBufferSize = 4 * Int(MAXPATHLEN)
 
     /// One process, or nil when any of the required calls fail (it exited, or isn't ours to read).
     static func sample(pid: Int32) -> ProcessSample? {
-        var pathBuf = [CChar](repeating: 0, count: 4 * Int(MAXPATHLEN))
+        var pathBuf = [CChar](repeating: 0, count: pathBufferSize)
+        return sample(pid: pid, pathBuf: &pathBuf)
+    }
+
+    /// Same, reusing one path buffer across a whole scan.
+    static func sample(pid: Int32, pathBuf: inout [CChar]) -> ProcessSample? {
+        pathBuf[0] = 0
         let pathLen = proc_pidpath(pid, &pathBuf, UInt32(pathBuf.count))
         let path: String? = pathLen > 0 ? String(cString: pathBuf) : nil
 
@@ -77,24 +86,34 @@ public struct LiveMemoryReader: MemoryReading {
         return s.isEmpty ? nil : s
     }
 
-    /// argv from KERN_PROCARGS2: argc, the executable path, padding NULs, then argc strings.
+    /// argv from KERN_PROCARGS2.
     private static func processArguments(pid: Int32) -> [String] {
         var mib: [Int32] = [CTL_KERN, KERN_PROCARGS2, pid]
         var size = 0
         guard sysctl(&mib, 3, nil, &size, nil, 0) == 0, size > MemoryLayout<Int32>.size else { return [] }
         var buf = [UInt8](repeating: 0, count: size)
         guard sysctl(&mib, 3, &buf, &size, nil, 0) == 0, size > MemoryLayout<Int32>.size else { return [] }
-        let argc = Int(buf.withUnsafeBytes { $0.loadUnaligned(as: Int32.self) })
-        var i = MemoryLayout<Int32>.size
-        while i < size, buf[i] != 0 { i += 1 }   // skip exec path
-        while i < size, buf[i] == 0 { i += 1 }   // skip padding
-        var out: [String] = []
-        while out.count < argc, i < size {
-            var j = i
-            while j < size, buf[j] != 0 { j += 1 }
-            out.append(String(decoding: buf[i..<j], as: UTF8.self))
-            i = j + 1
-        }
-        return out
+        return parseProcessArguments(Array(buf[..<size]))
     }
+}
+
+/// Parses a KERN_PROCARGS2 buffer: argc, the executable path, padding NULs, then argc NUL-separated strings.
+/// A process that rewrites its title (`process.title = ...`) overwrites the argv area, so the strings can come back
+/// as the title followed by empty ones. Truncated data gives the strings that are there.
+func parseProcessArguments(_ buf: [UInt8]) -> [String] {
+    let size = buf.count
+    guard size > MemoryLayout<Int32>.size else { return [] }
+    let argc = Int(buf.withUnsafeBytes { $0.loadUnaligned(as: Int32.self) })
+    guard argc > 0 else { return [] }
+    var i = MemoryLayout<Int32>.size
+    while i < size, buf[i] != 0 { i += 1 }   // skip exec path
+    while i < size, buf[i] == 0 { i += 1 }   // skip padding
+    var out: [String] = []
+    while out.count < argc, i < size {
+        var j = i
+        while j < size, buf[j] != 0 { j += 1 }
+        out.append(String(decoding: buf[i..<j], as: UTF8.self))
+        i = j + 1
+    }
+    return out
 }
