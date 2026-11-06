@@ -1,3 +1,4 @@
+import Darwin
 import Foundation
 
 // Thresholds. Percentages are of physical memory.
@@ -15,6 +16,23 @@ private let culpritLimit = 3
 private let growthMinimumBytes: Int64 = 1 << 30
 
 public enum MemoryPressure: Sendable { case normal, warning, critical }
+
+/// kern.memorystatus_vm_pressure_level: 1 normal, 2 warning, 4 critical. Anything else is treated as normal.
+public func memoryPressure(level: Int?) -> MemoryPressure {
+    switch level {
+    case 2: .warning
+    case 4: .critical
+    default: .normal
+    }
+}
+
+/// The kernel's pressure level right now; events only report changes, so this seeds the start. A failed read is normal.
+public func currentMemoryPressure() -> MemoryPressure {
+    var level: Int32 = 0
+    var size = MemoryLayout<Int32>.size
+    guard sysctlbyname("kern.memorystatus_vm_pressure_level", &level, &size, nil, 0) == 0 else { return .normal }
+    return memoryPressure(level: Int(level))
+}
 
 /// Decides whether the menu bar icon should be red. Holds at most five recent totals, in memory only.
 public struct MemoryWatch: Sendable {
@@ -104,6 +122,24 @@ public struct Culprit: Equatable, Sendable {
         self.growth = growth
         self.growthSeconds = growthSeconds
     }
+}
+
+/// How long a group's earlier size is kept as the point growth is measured from.
+private let baselineKeepSeconds: TimeInterval = 120
+
+/// The earlier sizes to measure the next scan's growth from. A group's baseline is kept until it is older than
+/// 2 minutes, then replaced by the current reading, so growth is measured over a window rather than over
+/// whatever the gap between two opens of the menu happened to be. A group missing from this scan is dropped.
+public func updatedBaselines(_ previous: [String: GroupReading], groups: [MemoryGroup], now: Date) -> [String: GroupReading] {
+    var next: [String: GroupReading] = [:]
+    for g in groups {
+        if let earlier = previous[g.id], now >= earlier.at, now.timeIntervalSince(earlier.at) <= baselineKeepSeconds {
+            next[g.id] = earlier
+        } else {
+            next[g.id] = GroupReading(bytes: g.bytes, at: now)
+        }
+    }
+    return next
 }
 
 /// Up to three groups holding at least 15% of physical memory, largest first.

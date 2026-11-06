@@ -13,7 +13,7 @@ import Foundation
     @ObservationIgnored private let reader: any MemoryReading
     @ObservationIgnored private var watch = MemoryWatch()
     @ObservationIgnored private var pressure = MemoryPressure.normal
-    /// The sizes from the last breakdown, so the next one can say what grew. Replaced each time.
+    /// Earlier group sizes, so a breakdown can say what grew. Each is kept for 2 minutes (see `updatedBaselines`).
     @ObservationIgnored private var previous: [String: GroupReading] = [:]
     @ObservationIgnored private var ticking = false
     /// Each read takes the next number as it starts; a result older than one already shown is dropped.
@@ -51,7 +51,8 @@ import Foundation
         pressureSource = p
         p.resume()
 
-        pressure = .normal
+        // Events only report changes, so ask once for where pressure already stands.
+        pressure = currentMemoryPressure()
         Task { await tick() }
     }
 
@@ -102,7 +103,7 @@ import Foundation
         publishedBreakdown = generation
         let found = namedCulprits(groups, physical: system.physical, previous: previous, now: now)
         if culprits != found { culprits = found }
-        previous = Dictionary(groups.map { ($0.id, GroupReading(bytes: $0.bytes, at: now)) }, uniquingKeysWith: { a, _ in a })
+        previous = updatedBaselines(previous, groups: groups, now: now)
     }
 }
 

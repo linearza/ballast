@@ -169,6 +169,65 @@ private func group(_ id: String, percent: Int) -> MemoryGroup {
     }
 }
 
+@Suite struct BaselineTests {
+    @Test func baselineIsKeptUntilTwoMinutesOld() {
+        let g = group("a", percent: 40)
+        let first = updatedBaselines([:], groups: [g], now: t0)
+        #expect(first["a"] == GroupReading(bytes: g.bytes, at: t0))
+        let bigger = MemoryGroup(id: "a", name: "a", processes: [], bytes: g.bytes + 3 * gb)
+        let soon = updatedBaselines(first, groups: [bigger], now: t0.addingTimeInterval(30))
+        #expect(soon["a"] == GroupReading(bytes: g.bytes, at: t0))
+        let edge = updatedBaselines(first, groups: [bigger], now: t0.addingTimeInterval(120))
+        #expect(edge["a"]?.at == t0)
+        let old = updatedBaselines(first, groups: [bigger], now: t0.addingTimeInterval(121))
+        #expect(old["a"] == GroupReading(bytes: bigger.bytes, at: t0.addingTimeInterval(121)))
+    }
+
+    @Test func repeatedOpensStillMeasureAgainstTheOldReading() {
+        let g = group("a", percent: 30)
+        var base = updatedBaselines([:], groups: [g], now: t0)
+        let bigger = MemoryGroup(id: "a", name: "a", processes: [], bytes: g.bytes + 2 * gb)
+        for i in 1...4 {
+            base = updatedBaselines(base, groups: [bigger], now: t0.addingTimeInterval(Double(i) * 20))
+        }
+        let r = culprits([bigger], physical: phys, previous: base, now: t0.addingTimeInterval(80))
+        #expect(r.first?.growth == 2 * gb)
+        #expect(r.first?.growthSeconds == 80)
+    }
+
+    @Test func groupsNotSeenAreDropped() {
+        let base = updatedBaselines([:], groups: [group("a", percent: 40), group("b", percent: 20)], now: t0)
+        let next = updatedBaselines(base, groups: [group("a", percent: 40)], now: t0.addingTimeInterval(10))
+        #expect(Set(next.keys) == ["a"])
+        // Coming back later starts a fresh baseline: no growth figure without a measured earlier reading.
+        let back = updatedBaselines(next, groups: [group("a", percent: 40), group("b", percent: 20)], now: t0.addingTimeInterval(20))
+        #expect(back["b"]?.at == t0.addingTimeInterval(20))
+    }
+
+    @Test func aClockGoingBackwardsStartsOver() {
+        let g = group("a", percent: 40)
+        let base = updatedBaselines([:], groups: [g], now: t0.addingTimeInterval(500))
+        #expect(updatedBaselines(base, groups: [g], now: t0)["a"]?.at == t0)
+    }
+}
+
+@Suite struct PressureLevelTests {
+    @Test func levelsMapToPressure() {
+        #expect(memoryPressure(level: 1) == .normal)
+        #expect(memoryPressure(level: 2) == .warning)
+        #expect(memoryPressure(level: 4) == .critical)
+    }
+
+    @Test func anythingElseIsNormal() {
+        for level in [0, 3, 5, -1, 100] { #expect(memoryPressure(level: level) == .normal) }
+        #expect(memoryPressure(level: nil) == .normal)
+    }
+
+    @Test func liveReadReturnsSomething() {
+        _ = currentMemoryPressure()  // must not crash; the value depends on the machine
+    }
+}
+
 @Suite struct MenuBarSymbolTests {
     @Test func memoryRedWinsOverLowSpace() {
         #expect(menuBarSymbol(memoryRed: true, lowSpace: true) == "memorychip.fill")
