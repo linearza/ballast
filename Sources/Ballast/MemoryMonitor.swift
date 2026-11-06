@@ -19,6 +19,8 @@ import Foundation
     /// Each read takes the next number as it starts; a result older than one already shown is dropped.
     @ObservationIgnored private var started = 0
     @ObservationIgnored private var published = 0
+    /// The newest read whose breakdown was applied; kept apart so a late forced breakdown isn't lost to a newer calm tick.
+    @ObservationIgnored private var publishedBreakdown = 0
     @ObservationIgnored private var timer: DispatchSourceTimer?
     @ObservationIgnored private var pressureSource: DispatchSourceMemoryPressure?
     @ObservationIgnored private let queue = DispatchQueue(label: "za.co.linear.ballast.memory", qos: .utility)
@@ -87,15 +89,17 @@ import Foundation
     }
 
     private func publish(system: SystemMemory, groups: [MemoryGroup]?, now: Date, generation: Int) {
-        guard generation > published else { return }
-        published = generation
-        watch.update(system: system, pressure: pressure, topGroupBytes: groups.map { $0.map(\.bytes).max() ?? 0 }, now: now)
-        // Only touch observed properties when they change, so a calm tick wakes no views.
-        if isRed != watch.isRed { isRed = watch.isRed }
-        if usedPercent != system.usedPercent { usedPercent = system.usedPercent }
-        if swapUsed != system.swapUsed { swapUsed = system.swapUsed }
-        // No breakdown this time: keep the last culprits and sizes (the open menu still shows them).
-        guard let groups else { return }
+        if generation > published {
+            published = generation
+            watch.update(system: system, pressure: pressure, topGroupBytes: groups.map { $0.map(\.bytes).max() ?? 0 }, now: now)
+            // Only touch observed properties when they change, so a calm tick wakes no views.
+            if isRed != watch.isRed { isRed = watch.isRed }
+            if usedPercent != system.usedPercent { usedPercent = system.usedPercent }
+            if swapUsed != system.swapUsed { swapUsed = system.swapUsed }
+        }
+        // No breakdown this time, or an older one than already shown: keep the culprits and sizes as they are.
+        guard let groups, generation > publishedBreakdown else { return }
+        publishedBreakdown = generation
         let found = namedCulprits(groups, physical: system.physical, previous: previous, now: now)
         if culprits != found { culprits = found }
         previous = Dictionary(groups.map { ($0.id, GroupReading(bytes: $0.bytes, at: now)) }, uniquingKeysWith: { a, _ in a })
