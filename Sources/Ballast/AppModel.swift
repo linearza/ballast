@@ -25,6 +25,7 @@ import UserNotifications
     var iphone: IPhoneSnapshot?
     let prefs: Preferences
     let updates = UpdateCheck()
+    let memory = MemoryMonitor()
     let imageCapture = ImageCaptureTransfer()
     /// Shows the "Where are your projects?" sheet.
     var firstRun = false
@@ -48,6 +49,7 @@ import UserNotifications
             Task { await Screenshots.capture(self, to: dir) }
         } else {
             prefs = Preferences()
+            prefs.onQuietChange = { [weak self] in self?.syncMemoryMonitor() }
             Task { await launch() }
             startIPhoneWatcher()
         }
@@ -73,6 +75,7 @@ import UserNotifications
         UNUserNotificationCenter.current().delegate = NotificationClicks.shared
         summary = await scanner.lastSummary()
         refreshSpace()
+        syncMemoryMonitor()
         if !prefs.rootsConfirmed {
             firstRun = true
             Windows.shared.showMain(self)
@@ -81,6 +84,11 @@ import UserNotifications
         }
         await measureTrash()
         await updates.check(notifying: !prefs.quiet)
+    }
+
+    /// Quiet mode hides the icon, so there is nothing for the memory alert to show: watch only while it is visible.
+    func syncMemoryMonitor() {
+        if prefs.quiet { memory.stop() } else { memory.start() }
     }
 
     /// The first-run sheet's Continue.

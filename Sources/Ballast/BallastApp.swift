@@ -22,7 +22,12 @@ struct BallastApp: App {
         MenuBarExtra(isInserted: Binding(get: { !model.prefs.quiet }, set: { model.prefs.quiet = !$0 })) {
             Popover(model: model)
         } label: {
-            Image(systemName: model.lowSpace ? "scalemass.fill" : "scalemass")
+            let symbol = menuBarSymbol(memoryRed: model.memory.isRed, lowSpace: model.lowSpace)
+            if model.memory.isRed, let percent = model.memory.usedPercent {
+                Label("\(percent)%", systemImage: symbol)
+            } else {
+                Image(systemName: symbol)
+            }
         }
         .menuBarExtraStyle(.window)
         .commands {

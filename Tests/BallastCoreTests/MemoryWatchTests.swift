@@ -166,3 +166,15 @@ private func group(_ id: String, percent: Int) -> MemoryGroup {
         #expect(culprits([g], physical: phys, previous: ["a": tiny], now: t0).first?.growth == nil)
     }
 }
+
+@Suite struct MenuBarSymbolTests {
+    @Test func memoryRedWinsOverLowSpace() {
+        #expect(menuBarSymbol(memoryRed: true, lowSpace: true) == "memorychip.fill")
+        #expect(menuBarSymbol(memoryRed: true, lowSpace: false) == "memorychip.fill")
+    }
+
+    @Test func otherwiseTheDiskSymbols() {
+        #expect(menuBarSymbol(memoryRed: false, lowSpace: true) == "scalemass.fill")
+        #expect(menuBarSymbol(memoryRed: false, lowSpace: false) == "scalemass")
+    }
+}

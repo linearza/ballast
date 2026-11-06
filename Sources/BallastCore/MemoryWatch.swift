@@ -123,3 +123,9 @@ public func culprits(_ groups: [MemoryGroup], physical: Int64, previous: [String
             return Culprit(group: g, share: share, growth: growth, growthSeconds: seconds)
         }
 }
+
+/// The menu bar symbol: memory strain first, then low disk space, then the calm one.
+public func menuBarSymbol(memoryRed: Bool, lowSpace: Bool) -> String {
+    if memoryRed { return "memorychip.fill" }
+    return lowSpace ? "scalemass.fill" : "scalemass"
+}

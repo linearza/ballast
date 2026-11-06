@@ -26,8 +26,13 @@ import Foundation
     }
     /// No menu bar icon and no notifications, until turned off in Settings.
     var quiet: Bool {
-        didSet { defaults.set(quiet, forKey: "quiet") }
+        didSet {
+            defaults.set(quiet, forKey: "quiet")
+            if quiet != oldValue { onQuietChange?() }
+        }
     }
+    /// Lets the memory monitor stop and start with quiet mode.
+    @ObservationIgnored var onQuietChange: (() -> Void)?
     /// Where videos and photos moved off an iPhone go, a folder per device inside it. Empty means ~/Pictures/From iPhone.
     var iphoneFolder: String {
         didSet { defaults.set(iphoneFolder, forKey: "iphoneFolder") }
