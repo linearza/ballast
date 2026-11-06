@@ -10,6 +10,16 @@ public enum TrashState: Sendable, Equatable {
 
     /// Emptying something that is already empty isn't worth an alert.
     public var shouldReportFailure: Bool { self != .empty }
+
+    /// The size when known, "Empty" when it is, an item count when only that is known, nothing when Ballast can't tell.
+    public var detail: String? {
+        switch self {
+        case .empty: "Empty"
+        case .full(let bytes?, _): formatBytes(bytes)
+        case .full(nil, let items?): items == 1 ? "1 item" : "\(items) items"
+        case .full(nil, nil), .unknown: nil
+        }
+    }
 }
 
 /// What Finder says about the Trash. It can read the Trash without Full Disk Access.

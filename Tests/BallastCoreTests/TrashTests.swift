@@ -99,4 +99,14 @@ import Testing
         #expect(FinderTrash.parse("4, missing value") == FinderTrash(items: 4, bytes: nil))
         #expect(FinderTrash.parse("nonsense") == nil)
     }
+
+    @Test func detailCoversEveryState() {
+        #expect(TrashState.empty.detail == "Empty")
+        #expect(TrashState.full(bytes: 5_000_000, items: 3).detail == formatBytes(5_000_000))
+        #expect(TrashState.full(bytes: 5_000_000, items: nil).detail == formatBytes(5_000_000))
+        #expect(TrashState.full(bytes: nil, items: 1).detail == "1 item")
+        #expect(TrashState.full(bytes: nil, items: 2).detail == "2 items")
+        #expect(TrashState.full(bytes: nil, items: nil).detail == nil)
+        #expect(TrashState.unknown.detail == nil)
+    }
 }

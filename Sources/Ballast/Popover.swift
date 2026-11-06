@@ -129,30 +129,7 @@ struct Popover: View {
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 
-    var trash: some View {
-        HStack {
-            Image(systemName: "trash").frame(width: 20)
-            Text("Trash")
-            Spacer()
-            if let detail = trashDetail {
-                Text(detail).font(Theme.mono()).foregroundStyle(Theme.muted)
-            }
-            Button("Empty") { Task { await model.emptyTrash() } }
-                .buttonStyle(DangerButtonStyle(outline: true))
-                .controlSize(.small)
-                .disabled(model.trash == .empty)
-        }
-    }
-
-    /// The size when known, "Empty" when it is, an item count when only that is known, nothing when Ballast can't tell.
-    var trashDetail: String? {
-        switch model.trash {
-        case .empty: "Empty"
-        case .full(let bytes?, _): formatBytes(bytes)
-        case .full(nil, let items?): items == 1 ? "1 item" : "\(items) items"
-        case .full(nil, nil), .unknown: nil
-        }
-    }
+    var trash: some View { TrashRow(model: model) }
 
     var footer: some View {
         HStack {
