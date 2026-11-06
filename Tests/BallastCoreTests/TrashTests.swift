@@ -80,6 +80,19 @@ import Testing
         #expect(TrashState.full(bytes: 1, items: 1).shouldReportFailure)
     }
 
+    @Test func asksFinderThroughOsascriptAndParsesTheReply() async {
+        let runner = FakeRunner(["/usr/bin/osascript -e \(FinderTrash.script)": FakeRunner.out("3, 5.0E+6\n")])
+        #expect(await FinderTrash.ask(runner: runner) == FinderTrash(items: 3, bytes: 5_000_000))
+    }
+
+    @Test func finderRefusalTimeoutAndNonsenseGiveNil() async {
+        let key = "/usr/bin/osascript -e \(FinderTrash.script)"
+        let denied = CommandResult(status: 1, stderr: "execution error: Not authorized to send Apple events to Finder. (-1743)")
+        #expect(await FinderTrash.ask(runner: FakeRunner([key: denied])) == nil)
+        #expect(await FinderTrash.ask(runner: FakeRunner([key: CommandResult(status: -1, stderr: "timed out after 12 s")])) == nil)
+        #expect(await FinderTrash.ask(runner: FakeRunner([key: FakeRunner.out("")])) == nil)
+    }
+
     @Test func parsesFinderReply() {
         #expect(FinderTrash.parse("3, 5000000") == FinderTrash(items: 3, bytes: 5_000_000))
         #expect(FinderTrash.parse("0, 0") == FinderTrash(items: 0, bytes: 0))

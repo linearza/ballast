@@ -177,8 +177,9 @@ import UserNotifications
     func measureTrash(_ reason: TrashRefresh = .passive) async {
         let folder = FileManager.default.homeDirectoryForCurrentUser.appending(path: ".Trash")
         // Without Full Disk Access the folder can't be read, so Finder is asked (read-only, via Automation).
+        let runner = env.runner
         trash = await trashState(at: folder, reason: reason, finderGranted: { Self.finderAutomationGranted() }) {
-            await Self.askFinderAboutTrash()
+            await FinderTrash.ask(runner: runner)
         }
     }
 
@@ -188,33 +189,6 @@ import UserNotifications
         guard !NSRunningApplication.runningApplications(withBundleIdentifier: id).isEmpty else { return false }
         let target = NSAppleEventDescriptor(bundleIdentifier: id)
         return AEDeterminePermissionToAutomateTarget(target.aeDesc, typeWildCard, typeWildCard, false) == noErr
-    }
-
-    /// Item count and size from Finder, on a background thread so a big Trash can't freeze the popover.
-    /// Each Apple event is cut off after 5 seconds; the count survives if only the size times out.
-    /// Nil if Finder won't say (e.g. Automation was refused).
-    nonisolated private static func askFinderAboutTrash() async -> FinderTrash? {
-        await withCheckedContinuation { cont in
-            Thread.detachNewThread {
-                let source = """
-                tell application "Finder"
-                    with timeout of 5 seconds
-                        set n to count of items of trash
-                    end timeout
-                    set s to missing value
-                    try
-                        with timeout of 5 seconds
-                            set s to physical size of trash
-                        end timeout
-                    end try
-                    return (n as text) & ", " & (s as text)
-                end tell
-                """
-                var error: NSDictionary?
-                let reply = NSAppleScript(source: source)?.executeAndReturnError(&error)
-                cont.resume(returning: error == nil ? reply?.stringValue.flatMap(FinderTrash.parse) : nil)
-            }
-        }
     }
 
     static let automationSettingsURL = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Automation")!

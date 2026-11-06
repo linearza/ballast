@@ -24,9 +24,34 @@ public struct FinderTrash: Sendable, Equatable {
 
     /// The AppleScript reply "count, size" — the size is "missing value" when Finder won't give one.
     public static func parse(_ reply: String) -> FinderTrash? {
-        let parts = reply.split(separator: ",", omittingEmptySubsequences: false).map { $0.trimmingCharacters(in: .whitespaces) }
+        let parts = reply.split(separator: ",", omittingEmptySubsequences: false).map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
         guard parts.count == 2, let items = Int(parts[0]), items >= 0 else { return nil }
-        return FinderTrash(items: items, bytes: Int64(parts[1]).flatMap { $0 >= 0 ? $0 : nil })
+        // AppleScript prints a big number as a real, e.g. 1.2E+9.
+        let bytes = Int64(parts[1]) ?? Double(parts[1]).flatMap { $0.isFinite && $0 < 9e18 ? Int64($0) : nil }
+        return FinderTrash(items: items, bytes: bytes.flatMap { $0 >= 0 ? $0 : nil })
+    }
+
+    /// Read-only. Each Apple event is cut off after 5 seconds, so a slow size leaves the count.
+    static let script = """
+    tell application "Finder"
+        with timeout of 5 seconds
+            set n to count of items of trash
+        end timeout
+        set s to missing value
+        try
+            with timeout of 5 seconds
+                set s to physical size of trash
+            end timeout
+        end try
+        return (n as text) & ", " & (s as text)
+    end tell
+    """
+
+    /// Asks Finder through a separate osascript process (NSAppleScript is main-thread only, and the main thread
+    /// may be busy emptying the Trash). A refusal (-1743 on stderr), timeout or odd output gives nil.
+    public static func ask(runner: any CommandRunner) async -> FinderTrash? {
+        let r = await runner.run(["/usr/bin/osascript", "-e", script], timeout: .seconds(12))
+        return r.ok ? parse(r.stdout) : nil
     }
 }
 
