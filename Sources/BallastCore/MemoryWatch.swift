@@ -6,6 +6,7 @@ private let clearShareOfPhysical = 40        // top group must fall below this t
 private let jumpShareOfPhysical = 25         // used rising by this much...
 private let jumpWindowSeconds: TimeInterval = 120  // ...within this many seconds is a jump
 private let minimumRedSeconds: TimeInterval = 60   // stays red at least this long
+private let minimumTotalsSpacing: TimeInterval = 20  // extra readings closer than this aren't stored
 private let totalsWindowSize = 5             // readings of "used" kept, nothing more
 private let breakdownUsedPercent = 50        // below this (and calm) no breakdown is needed
 private let culpritSharePercent = 15         // a group needs this share to be named
@@ -38,7 +39,7 @@ public struct MemoryWatch: Sendable {
     /// False only when memory is calm enough that no single app can be the problem.
     public func needsBreakdown(system: SystemMemory, pressure: MemoryPressure, now: Date) -> Bool {
         guard system.physical > 0 else { return false }
-        if pressure != .normal { return true }
+        if isRed || pressure != .normal { return true }
         if system.used * 100 >= system.physical * Int64(breakdownUsedPercent) { return true }
         return hasJump(system: system, now: now)
     }
@@ -46,7 +47,11 @@ public struct MemoryWatch: Sendable {
     /// `topGroupBytes` is nil when no breakdown was taken: that counts as no known hog.
     public mutating func update(system: SystemMemory, pressure: MemoryPressure, topGroupBytes: Int64?, now: Date) {
         defer {
-            totals.append(Total(used: system.used, at: now))
+            if let newest = totals.last, now >= newest.at, now.timeIntervalSince(newest.at) < minimumTotalsSpacing {
+                // Too soon after the last stored reading; keep the older ones the jump rule needs.
+            } else {
+                totals.append(Total(used: system.used, at: now))
+            }
             if totals.count > totalsWindowSize { totals.removeFirst(totals.count - totalsWindowSize) }
         }
         guard system.physical > 0 else {
@@ -54,6 +59,7 @@ public struct MemoryWatch: Sendable {
             redSince = nil
             return
         }
+        if let since = redSince, now < since { redSince = now }
         let top = (topGroupBytes ?? 0) * 100
         let jump = hasJump(system: system, now: now)
         let triggered = pressure != .normal || top >= system.physical * Int64(redShareOfPhysical) || jump

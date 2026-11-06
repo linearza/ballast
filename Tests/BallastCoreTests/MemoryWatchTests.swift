@@ -83,6 +83,36 @@ private func group(_ id: String, percent: Int) -> MemoryGroup {
         #expect(j.needsBreakdown(system: sys(usedPercent: 35), pressure: .normal, now: t0.addingTimeInterval(30)))
     }
 
+    @Test func breakdownRunsWhileRedAndHoldsTheBand() {
+        var w = MemoryWatch()
+        w.update(system: sys(usedPercent: 70), pressure: .normal, topGroupBytes: phys * 55 / 100, now: t0)
+        #expect(w.isRed)
+        let later = t0.addingTimeInterval(200)
+        #expect(w.needsBreakdown(system: sys(usedPercent: 45), pressure: .normal, now: later))
+        w.update(system: sys(usedPercent: 45), pressure: .normal, topGroupBytes: phys * 44 / 100, now: later)
+        #expect(w.isRed)
+    }
+
+    @Test func frequentUpdatesDoNotEvictTheJumpBaseline() {
+        var w = MemoryWatch()
+        w.update(system: sys(usedPercent: 20), pressure: .normal, topGroupBytes: nil, now: t0)
+        for i in 1...10 {
+            w.update(system: sys(usedPercent: 20), pressure: .normal, topGroupBytes: nil, now: t0.addingTimeInterval(Double(i)))
+        }
+        #expect(!w.isRed)
+        w.update(system: sys(usedPercent: 45), pressure: .normal, topGroupBytes: nil, now: t0.addingTimeInterval(100))
+        #expect(w.isRed)
+    }
+
+    @Test func backwardsClockStillClears() {
+        var w = MemoryWatch()
+        w.update(system: sys(usedPercent: 20), pressure: .critical, topGroupBytes: nil, now: t0.addingTimeInterval(1000))
+        w.update(system: sys(usedPercent: 20), pressure: .normal, topGroupBytes: nil, now: t0)
+        #expect(w.isRed)
+        w.update(system: sys(usedPercent: 20), pressure: .normal, topGroupBytes: nil, now: t0.addingTimeInterval(61))
+        #expect(!w.isRed)
+    }
+
     @Test func zeroPhysicalIsNeverRed() {
         var w = MemoryWatch()
         w.update(system: SystemMemory(physical: 0, used: 100, swapUsed: 0), pressure: .normal, topGroupBytes: 100, now: t0)
@@ -92,9 +122,9 @@ private func group(_ id: String, percent: Int) -> MemoryGroup {
     @Test func totalsWindowStaysBounded() {
         var w = MemoryWatch()
         for i in 0..<1000 {
-            w.update(system: sys(usedPercent: 30), pressure: .normal, topGroupBytes: nil, now: t0.addingTimeInterval(Double(i)))
+            w.update(system: sys(usedPercent: 30), pressure: .normal, topGroupBytes: nil, now: t0.addingTimeInterval(Double(i) * 20))
         }
-        #expect(w.storedTotalsCount <= 5)
+        #expect(w.storedTotalsCount == 5)
     }
 }
 
