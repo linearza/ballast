@@ -131,6 +131,14 @@ private func procArgs(argc: Int32, exec: String, strings: [String], padding: Int
         #expect(Set(g.map(\.name)) == ["vitest · heyanna", "chrome-devtools-mcp · heyanna", "npm · heyanna"])
     }
 
+    @Test func liveShapeTitleCutShortWithEnvironmentLeakingIn() {
+        // Seen on a real macOS: the title is clipped to the old argv length (no closing paren) and the next
+        // "argument" is an environment string.
+        let w = sample(pid: 1, path: node, args: ["node (vitest 1", "TERM_SESSION_ID=abc"], cwd: "/Users/me/heyanna", bytes: 1)
+        #expect(groupProcesses([w])[0].name == "vitest · heyanna")
+        #expect(processLabel(w) == "vitest")
+    }
+
     @Test func trailingColonIsDropped() {
         #expect(groupProcesses([titled(1, "puma: cluster worker 0")])[0].name == "puma · heyanna")
         #expect(groupProcesses([titled(1, "puma:")])[0].name == "puma · heyanna")
