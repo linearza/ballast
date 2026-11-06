@@ -1,3 +1,4 @@
+import Darwin
 import Foundation
 import Testing
 @testable import BallastCore
@@ -29,6 +30,12 @@ private extension ProcessSample {
     @Test func pnpmStoreSegmentIsSkipped() {
         let w = sample(pid: 1, path: "/opt/node/bin/node", args: ["node", "/r/node_modules/.pnpm/vitest@1/node_modules/vitest/dist/x.js"], cwd: "/r", bytes: 4)
         #expect(groupProcesses([w])[0].name == "vitest")
+    }
+
+    @Test func binShimsNameTheToolNotBin() {
+        let a = sample(pid: 1, path: "/opt/node/bin/node", args: ["node", "/r/node_modules/.bin/vite"], cwd: "/r", bytes: 1)
+        let b = sample(pid: 2, path: "/opt/node/bin/node", args: ["node", "/r/node_modules/.bin/tsc"], cwd: "/r", bytes: 1)
+        #expect(Set(groupProcesses([a, b]).map(\.name)) == ["vite", "tsc"])
     }
 
     @Test func unrelatedNodeStaysApart() {
@@ -77,6 +84,13 @@ private extension ProcessSample {
 @Suite struct LiveMemoryReaderTests {
     @Test func nonexistentPidIsSkipped() {
         #expect(LiveMemoryReader.sample(pid: Int32.max) == nil)
+    }
+
+    @Test func listsAllReadableProcesses() {
+        let total = Int(proc_listallpids(nil, 0))
+        let got = LiveMemoryReader().processes().count
+        #expect(total > 0)
+        #expect(Double(got) >= Double(total) * 0.5)
     }
 
     @Test func seesItself() {

@@ -26,7 +26,7 @@ public struct LiveMemoryReader: MemoryReading {
         var swap = xsw_usage()
         var size = MemoryLayout<xsw_usage>.size
         let swapUsed = sysctlbyname("vm.swapusage", &swap, &size, nil, 0) == 0 ? Int64(swap.xsu_used) : 0
-        return SystemMemory(physical: Int64(ProcessInfo.processInfo.physicalMemory), used: pages * page, swapUsed: swapUsed)
+        return SystemMemory(physical: Int64(ProcessInfo.processInfo.physicalMemory), used: max(0, pages * page), swapUsed: swapUsed)
     }
 
     public func processes() -> [ProcessSample] {
@@ -35,7 +35,7 @@ public struct LiveMemoryReader: MemoryReading {
         var pids = [Int32](repeating: 0, count: capacity + 64)
         let bytes = proc_listallpids(&pids, Int32(pids.count * MemoryLayout<Int32>.stride))
         guard bytes > 0 else { return [] }
-        let n = Int(bytes) / MemoryLayout<Int32>.stride
+        let n = min(Int(bytes), pids.count)  // proc_listallpids returns a pid count, not bytes
         return pids.prefix(n).filter { $0 > 0 }.compactMap { Self.sample(pid: $0) }
     }
 

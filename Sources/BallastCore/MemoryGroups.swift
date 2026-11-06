@@ -69,6 +69,10 @@ private func toolName(in args: [String]) -> String? {
         for (i, part) in parts.enumerated() where part == "node_modules" && i + 1 < parts.count {
             let next = String(parts[i + 1])
             if next == ".pnpm" { continue }
+            if next == ".bin" {
+                if i + 2 < parts.count { found = String(parts[i + 2]) }
+                continue
+            }
             if next.hasPrefix("@"), i + 2 < parts.count {
                 found = "\(next)/\(parts[i + 2])"
             } else {
