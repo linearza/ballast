@@ -16,6 +16,9 @@ import Foundation
     /// The sizes from the last breakdown, so the next one can say what grew. Replaced each time.
     @ObservationIgnored private var previous: [String: GroupReading] = [:]
     @ObservationIgnored private var ticking = false
+    /// Each read takes the next number as it starts; a result older than one already shown is dropped.
+    @ObservationIgnored private var started = 0
+    @ObservationIgnored private var published = 0
     @ObservationIgnored private var timer: DispatchSourceTimer?
     @ObservationIgnored private var pressureSource: DispatchSourceMemoryPressure?
     @ObservationIgnored private let queue = DispatchQueue(label: "za.co.linear.ballast.memory", qos: .utility)
@@ -71,6 +74,8 @@ import Foundation
     }
 
     private func read(forceBreakdown: Bool) async {
+        started += 1
+        let generation = started
         let reader = reader
         guard let system = await Task.detached(priority: .utility, operation: { reader.system() }).value else { return }
         let now = Date()
@@ -78,20 +83,22 @@ import Foundation
         if forceBreakdown || watch.needsBreakdown(system: system, pressure: pressure, now: now) {
             groups = await Task.detached(priority: .utility) { groupProcesses(reader.processes()) }.value
         }
-        publish(system: system, groups: groups, now: Date())
+        publish(system: system, groups: groups, now: Date(), generation: generation)
     }
 
-    private func publish(system: SystemMemory, groups: [MemoryGroup]?, now: Date) {
+    private func publish(system: SystemMemory, groups: [MemoryGroup]?, now: Date, generation: Int) {
+        guard generation > published else { return }
+        published = generation
         watch.update(system: system, pressure: pressure, topGroupBytes: groups.map { $0.map(\.bytes).max() ?? 0 }, now: now)
-        isRed = watch.isRed
-        usedPercent = system.usedPercent
-        swapUsed = system.swapUsed
-        if let groups {
-            culprits = namedCulprits(groups, physical: system.physical, previous: previous, now: now)
-            previous = Dictionary(groups.map { ($0.id, GroupReading(bytes: $0.bytes, at: now)) }, uniquingKeysWith: { a, _ in a })
-        } else {
-            culprits = []
-        }
+        // Only touch observed properties when they change, so a calm tick wakes no views.
+        if isRed != watch.isRed { isRed = watch.isRed }
+        if usedPercent != system.usedPercent { usedPercent = system.usedPercent }
+        if swapUsed != system.swapUsed { swapUsed = system.swapUsed }
+        // No breakdown this time: keep the last culprits and sizes (the open menu still shows them).
+        guard let groups else { return }
+        let found = namedCulprits(groups, physical: system.physical, previous: previous, now: now)
+        if culprits != found { culprits = found }
+        previous = Dictionary(groups.map { ($0.id, GroupReading(bytes: $0.bytes, at: now)) }, uniquingKeysWith: { a, _ in a })
     }
 }
 

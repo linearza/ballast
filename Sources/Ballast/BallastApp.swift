@@ -24,7 +24,8 @@ struct BallastApp: App {
         } label: {
             let symbol = menuBarSymbol(memoryRed: model.memory.isRed, lowSpace: model.lowSpace)
             if model.memory.isRed, let percent = model.memory.usedPercent {
-                Label("\(percent)%", systemImage: symbol)
+                // One Text with an inline image: MenuBarExtra labels keep a single image or text run, so an HStack/Label can drop one.
+                Text("\(Image(systemName: symbol)) \(percent)%")
             } else {
                 Image(systemName: symbol)
             }
