@@ -71,6 +71,28 @@ private final class FakeControl: ProcessControl, @unchecked Sendable {
         #expect(closeOption(for: g, myUID: 501, myPID: 1) == .processes(mine, skipped: 1))
     }
 
+    @Test func reasonForSystemPathNamesMacOS() {
+        let g = group([sample(10, path: "/usr/libexec/thing")])
+        #expect(closeOption(for: g, myUID: 501, myPID: 1) == .notOffered("That's part of macOS, so Ballast won't close it."))
+    }
+
+    @Test func reasonForOtherUsersNamesTheUser() {
+        let g = group([sample(10, uid: 0), sample(11, uid: 0)])
+        #expect(closeOption(for: g, myUID: 501, myPID: 1) == .notOffered("That belongs to another user, so Ballast won't close it."))
+    }
+
+    @Test func reasonForUnidentifiedProcessIsNotMacOS() {
+        let g = group([sample(10, path: nil)])
+        #expect(closeOption(for: g, myUID: 501, myPID: 1) == .notOffered("Ballast can't tell what that is, so it won't close it."))
+    }
+
+    @Test func mixedReasonsUseMacOSFirstThenOtherUser() {
+        let sys = group([sample(10, path: "/usr/libexec/thing"), sample(11, uid: 0)])
+        #expect(closeOption(for: sys, myUID: 501, myPID: 1) == .notOffered("That's part of macOS, so Ballast won't close it."))
+        let other = group([sample(10, path: nil), sample(11, uid: 0)])
+        #expect(closeOption(for: other, myUID: 501, myPID: 1) == .notOffered("That belongs to another user, so Ballast won't close it."))
+    }
+
     @Test func allIneligibleNotOffered() {
         let g = group([sample(10, path: nil)])
         guard case .notOffered = closeOption(for: g, myUID: 501, myPID: 1) else { Issue.record("expected notOffered"); return }

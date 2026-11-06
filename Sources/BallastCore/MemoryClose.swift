@@ -9,6 +9,10 @@ public enum CloseOption: Equatable, Sendable {
 
 private let systemPrefixes = ["/System/", "/usr/libexec/", "/usr/sbin/", "/sbin/", "/bin/", "/usr/bin/", "/Library/Apple/"]
 
+private let macOSReason = "That's part of macOS, so Ballast won't close it."
+private let otherUserReason = "That belongs to another user, so Ballast won't close it."
+private let unidentifiedReason = "Ballast can't tell what that is, so it won't close it."
+
 private func isSystemPath(_ path: String) -> Bool {
     systemPrefixes.contains { path.hasPrefix($0) }
 }
@@ -23,8 +27,8 @@ public func closeOption(for group: MemoryGroup, myUID: UInt32, myPID: Int32) -> 
 
     if group.id.hasPrefix("app:") {
         let bundle = String(group.id.dropFirst(4))
-        if isSystemPath(bundle) { return .notOffered("That's part of macOS.") }
-        if mine.isEmpty { return .notOffered("That belongs to another user.") }
+        if isSystemPath(bundle) { return .notOffered(macOSReason) }
+        if mine.isEmpty { return .notOffered(otherUserReason) }
         return .app(bundlePath: bundle, skipped: notMine)
     }
 
@@ -33,7 +37,9 @@ public func closeOption(for group: MemoryGroup, myUID: UInt32, myPID: Int32) -> 
         return !isSystemPath(path)
     }
     if closable.isEmpty {
-        return .notOffered(mine.isEmpty ? "That belongs to another user." : "That's part of macOS.")
+        if group.processes.contains(where: { $0.path.map(isSystemPath) ?? false }) { return .notOffered(macOSReason) }
+        if mine.count < group.processes.count { return .notOffered(otherUserReason) }
+        return .notOffered(unidentifiedReason)
     }
     return .processes(closable, skipped: group.processes.count - closable.count)
 }

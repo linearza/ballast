@@ -6,6 +6,10 @@ struct Popover: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
+            if model.memory.isRed {
+                MemoryBlock(model: model)
+                Rule()
+            }
             freeSpace
             if let summary = model.summary {
                 Button { open(SafeView.id) } label: {
@@ -50,6 +54,7 @@ struct Popover: View {
         .padding(14)
         .frame(width: 320)
         .ballastSurface()
+        .task { await model.memory.refreshForMenu() }
     }
 
     var freeSpace: some View {

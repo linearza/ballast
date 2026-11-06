@@ -129,3 +129,22 @@ public func menuBarSymbol(memoryRed: Bool, lowSpace: Bool) -> String {
     if memoryRed { return "memorychip.fill" }
     return lowSpace ? "scalemass.fill" : "scalemass"
 }
+
+private func growthDuration(_ seconds: Int) -> String {
+    if seconds < 120 { return "\(seconds) s" }
+    if seconds < 3600 * 2 { return "\(seconds / 60) min" }
+    return "\(seconds / 3600) hr"
+}
+
+/// One row of text for a culprit: name, process count (groups only), size, share, and growth when measured.
+public func culpritLine(_ c: Culprit) -> String {
+    var parts = [c.group.name]
+    if c.group.processes.count > 1 { parts.append("\(c.group.processes.count) processes") }
+    parts.append(formatBytes(c.group.bytes))
+    parts.append("\(c.share)% of memory")
+    var line = parts.joined(separator: " · ")
+    if let growth = c.growth, let seconds = c.growthSeconds {
+        line += " · up \(formatBytes(growth)) in \(growthDuration(seconds))"
+    }
+    return line
+}

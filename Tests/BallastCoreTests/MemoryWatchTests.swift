@@ -178,3 +178,32 @@ private func group(_ id: String, percent: Int) -> MemoryGroup {
         #expect(menuBarSymbol(memoryRed: false, lowSpace: false) == "scalemass")
     }
 }
+
+private func culprit(_ name: String, count: Int, bytes: Int64, share: Int, growth: Int64? = nil, seconds: Int? = nil) -> Culprit {
+    let procs = (0..<count).map { ProcessSample(pid: Int32($0 + 10), startSeconds: 1, uid: 501, path: "/x", args: [], cwd: nil, footprint: 1) }
+    return Culprit(group: MemoryGroup(id: name, name: name, processes: procs, bytes: bytes), share: share, growth: growth, growthSeconds: seconds)
+}
+
+@Suite struct CulpritLineTests {
+    @Test func singleProcessOmitsCount() {
+        #expect(culpritLine(culprit("Brave Browser", count: 1, bytes: 22 * gb, share: 69)) == "Brave Browser · \(formatBytes(22 * gb)) · 69% of memory")
+    }
+
+    @Test func groupShowsCountAndGrowth() {
+        let c = culprit("vitest", count: 8, bytes: 31 * gb, share: 31, growth: 24 * gb, seconds: 120)
+        #expect(culpritLine(c) == "vitest · 8 processes · \(formatBytes(31 * gb)) · 31% of memory · up \(formatBytes(24 * gb)) in 2 min")
+    }
+
+    @Test func growthDurationUnits() {
+        func tail(_ s: Int) -> String { culpritLine(culprit("a", count: 1, bytes: 5 * gb, share: 30, growth: 2 * gb, seconds: s)) }
+        #expect(tail(45).hasSuffix("in 45 s"))
+        #expect(tail(119).hasSuffix("in 119 s"))
+        #expect(tail(120).hasSuffix("in 2 min"))
+        #expect(tail(150).hasSuffix("in 2 min"))
+        #expect(tail(3 * 3600 + 100).hasSuffix("in 3 hr"))
+    }
+
+    @Test func noGrowthMeansNoUpPart() {
+        #expect(!culpritLine(culprit("a", count: 2, bytes: 5 * gb, share: 30)).contains("up"))
+    }
+}
