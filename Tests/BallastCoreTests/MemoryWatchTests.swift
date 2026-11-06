@@ -95,12 +95,13 @@ private func group(_ id: String, percent: Int) -> MemoryGroup {
 
     @Test func frequentUpdatesDoNotEvictTheJumpBaseline() {
         var w = MemoryWatch()
-        w.update(system: sys(usedPercent: 20), pressure: .normal, topGroupBytes: nil, now: t0)
+        w.update(system: sys(usedPercent: 5), pressure: .normal, topGroupBytes: nil, now: t0)
         for i in 1...10 {
             w.update(system: sys(usedPercent: 20), pressure: .normal, topGroupBytes: nil, now: t0.addingTimeInterval(Double(i)))
         }
         #expect(!w.isRed)
-        w.update(system: sys(usedPercent: 45), pressure: .normal, topGroupBytes: nil, now: t0.addingTimeInterval(100))
+        // 25 points above the baseline, only 10 above the fillers.
+        w.update(system: sys(usedPercent: 30), pressure: .normal, topGroupBytes: nil, now: t0.addingTimeInterval(100))
         #expect(w.isRed)
     }
 
