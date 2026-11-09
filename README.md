@@ -98,7 +98,7 @@ The menu bar icon shows free space at a glance. Click it for a summary of the bi
   <img src="docs/screenshots/iphone.png" alt="Connected iPhone: a storage bar split into photos and videos, apps, iOS, not visible over USB and free, then large videos and apps with two videos and one app ticked">
 </picture>
 
-**Memory alerts** turn the menu bar icon red, with how full memory is beside it, when your Mac is running short. Click it and the menu names the apps and groups of processes holding the most, how much of memory each takes and whether it grew lately, each with a **Close** button. It's only the icon: no notification, no sound, nothing in your way. Ballast checks every 30 seconds and when macOS reports memory pressure, and only looks at individual apps when memory is getting full.
+**Memory alerts** change the menu bar icon to a memory chip, with how full memory is beside it, when your Mac is running short. Click it and the menu names the apps and groups of processes holding the most, how much of memory each takes and whether it grew lately, each with a **Close** button. It's only the icon: no notification, no sound, nothing in your way. Ballast checks every 30 seconds and when macOS reports memory pressure, and only looks at individual apps when memory is getting full.
 
 <p align="center">
 <picture>
@@ -107,7 +107,7 @@ The menu bar icon shows free space at a glance. Click it for a summary of the bi
 </picture>
 </p>
 
-**Close** asks first, and never closes anything automatically. For an app it asks the app to quit, and offers **Force Quit** only if it's still running after 5 seconds. For a group of command-line processes it asks them to stop, and offers **Force Stop** only if some are still running after 3 seconds. Ballast only offers Close for your own apps and processes. It never closes macOS's own processes, other users' or root's processes, or Ballast itself: those are listed with the reason instead. Nothing about memory is written to disk. Quiet mode stops the checks.
+**Close** asks first, and never closes anything automatically. For an app it asks the app to quit, and offers **Force Quit** only if it's still running after 5 seconds. For a group of command-line processes it asks them to stop, and offers **Force Stop** only if some are still running after 3 seconds. Ballast only offers Close for your own apps and processes. It never closes macOS's own processes, other users' or root's processes, or Ballast itself. When one of those is what's using the memory, its row says why there's no Close button, but Ballast can't measure what's inside root's or other users' processes, so they can't be named at all. When nothing it can measure stands out, the menu says so. Nothing about memory is written to disk. Quiet mode stops the checks.
 
 ## Safety in detail
 

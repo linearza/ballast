@@ -174,15 +174,20 @@ private func growthDuration(_ seconds: Int) -> String {
     return "\(seconds / 3600) hr"
 }
 
-/// One row of text for a culprit: name, process count (groups only), size, share, and growth when measured.
-public func culpritLine(_ c: Culprit) -> String {
-    var parts = [c.group.name]
-    if c.group.processes.count > 1 { parts.append("\(c.group.processes.count) processes") }
-    parts.append(formatBytes(c.group.bytes))
-    parts.append("\(c.share)% of memory")
-    var line = parts.joined(separator: " · ")
+private func figure(_ s: String) -> String { s.replacingOccurrences(of: " ", with: "\u{00A0}") }
+
+/// The first line of a culprit's row.
+public func culpritName(_ c: Culprit) -> String { c.group.name }
+
+/// The second, smaller line: process count (groups only), size, share, and growth when measured.
+/// Spaces inside each figure are no-break spaces, so a narrow menu wraps between figures, never inside one.
+public func culpritDetails(_ c: Culprit) -> String {
+    var parts: [String] = []
+    if c.group.processes.count > 1 { parts.append(figure("\(c.group.processes.count) processes")) }
+    parts.append(figure(formatBytes(c.group.bytes)))
+    parts.append(figure("\(c.share)% of memory"))
     if let growth = c.growth, let seconds = c.growthSeconds {
-        line += " · up \(formatBytes(growth)) in \(growthDuration(seconds))"
+        parts.append(figure("up \(formatBytes(growth)) in \(growthDuration(seconds))"))
     }
-    return line
+    return parts.joined(separator: " · ")
 }

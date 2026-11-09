@@ -245,26 +245,43 @@ private func culprit(_ name: String, count: Int, bytes: Int64, share: Int, growt
     return Culprit(group: MemoryGroup(id: name, name: name, processes: procs, bytes: bytes), share: share, growth: growth, growthSeconds: seconds)
 }
 
+private let nb = "\u{00A0}"
+
+/// The details line keeps each figure on one line: a space inside one is a no-break space.
+private func figure(_ s: String) -> String { s.replacingOccurrences(of: " ", with: nb) }
+
 @Suite struct CulpritLineTests {
+    @Test func nameIsJustTheName() {
+        #expect(culpritName(culprit("node · projects", count: 8, bytes: 22 * gb, share: 69)) == "node · projects")
+    }
+
     @Test func singleProcessOmitsCount() {
-        #expect(culpritLine(culprit("Brave Browser", count: 1, bytes: 22 * gb, share: 69)) == "Brave Browser · \(formatBytes(22 * gb)) · 69% of memory")
+        #expect(culpritDetails(culprit("Brave Browser", count: 1, bytes: 22 * gb, share: 69)) == "\(figure(formatBytes(22 * gb))) · 69%\(nb)of\(nb)memory")
     }
 
     @Test func groupShowsCountAndGrowth() {
         let c = culprit("vitest", count: 8, bytes: 31 * gb, share: 31, growth: 24 * gb, seconds: 120)
-        #expect(culpritLine(c) == "vitest · 8 processes · \(formatBytes(31 * gb)) · 31% of memory · up \(formatBytes(24 * gb)) in 2 min")
+        #expect(culpritDetails(c) == "8\(nb)processes · \(figure(formatBytes(31 * gb))) · 31%\(nb)of\(nb)memory · up\(nb)\(figure(formatBytes(24 * gb)))\(nb)in\(nb)2\(nb)min")
+    }
+
+    @Test func detailsNeverBreakInsideAFigure() {
+        let c = culprit("vitest", count: 8, bytes: 34 * gb, share: 69, growth: 7 * gb, seconds: 30)
+        let parts = culpritDetails(c).components(separatedBy: " · ")
+        #expect(parts.count == 4)
+        for part in parts { #expect(!part.contains(" ")) }
+        #expect(parts[3].hasPrefix("up\(nb)"))
     }
 
     @Test func growthDurationUnits() {
-        func tail(_ s: Int) -> String { culpritLine(culprit("a", count: 1, bytes: 5 * gb, share: 30, growth: 2 * gb, seconds: s)) }
-        #expect(tail(45).hasSuffix("in 45 s"))
-        #expect(tail(119).hasSuffix("in 119 s"))
-        #expect(tail(120).hasSuffix("in 2 min"))
-        #expect(tail(150).hasSuffix("in 2 min"))
-        #expect(tail(3 * 3600 + 100).hasSuffix("in 3 hr"))
+        func tail(_ s: Int) -> String { culpritDetails(culprit("a", count: 1, bytes: 5 * gb, share: 30, growth: 2 * gb, seconds: s)) }
+        #expect(tail(45).hasSuffix("in\(nb)45\(nb)s"))
+        #expect(tail(119).hasSuffix("in\(nb)119\(nb)s"))
+        #expect(tail(120).hasSuffix("in\(nb)2\(nb)min"))
+        #expect(tail(150).hasSuffix("in\(nb)2\(nb)min"))
+        #expect(tail(3 * 3600 + 100).hasSuffix("in\(nb)3\(nb)hr"))
     }
 
     @Test func noGrowthMeansNoUpPart() {
-        #expect(!culpritLine(culprit("a", count: 2, bytes: 5 * gb, share: 30)).contains("up"))
+        #expect(!culpritDetails(culprit("a", count: 2, bytes: 5 * gb, share: 30)).contains("up"))
     }
 }

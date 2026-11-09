@@ -18,7 +18,7 @@ struct MemoryBlock: View {
                 Text("\(formatBytes(memory.swapUsed)) swapped out to disk").font(.caption).foregroundStyle(Theme.muted).padding(.leading, 28)
             }
             if memory.culprits.isEmpty {
-                Text("Nothing stands out: memory is spread across lots of small processes.")
+                Text("Nothing Ballast can measure stands out. It can't see inside macOS's or other users' processes.")
                     .font(.caption).foregroundStyle(Theme.muted).padding(.leading, 28)
             } else {
                 ForEach(memory.culprits, id: \.group.id) { c in row(c) }
@@ -28,9 +28,13 @@ struct MemoryBlock: View {
 
     private func row(_ c: Culprit) -> some View {
         let option = closeOption(for: c.group, myUID: getuid(), myPID: ProcessInfo.processInfo.processIdentifier)
+        let name = culpritName(c)
         return VStack(alignment: .leading, spacing: 4) {
-            HStack(alignment: .firstTextBaseline) {
-                Text(culpritLine(c)).font(.callout).fixedSize(horizontal: false, vertical: true)
+            HStack(alignment: .top, spacing: 6) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(name).font(.callout).lineLimit(1).truncationMode(.middle)
+                    Text(culpritDetails(c)).font(.caption).foregroundStyle(Theme.muted).fixedSize(horizontal: false, vertical: true)
+                }
                 Spacer(minLength: 6)
                 switch option {
                 case .notOffered:
@@ -39,6 +43,8 @@ struct MemoryBlock: View {
                     Button("Close") { Task { await closer.close(c.group, option: option, memory: model.memory) } }
                         .buttonStyle(DangerButtonStyle(outline: true))
                         .controlSize(.small)
+                        .fixedSize()
+                        .accessibilityLabel("Close \(name)")
                         .disabled(closer.closing.contains(c.group.id))
                 }
             }

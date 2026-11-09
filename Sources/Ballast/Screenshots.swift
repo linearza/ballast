@@ -72,16 +72,16 @@ import SwiftUI
     /// A made-up strained Mac: an invented browser with a runaway helper and a made-up dev server, both owned by the current user.
     static func fillMemory(_ model: AppModel) {
         let me = getuid()
-        func sample(_ pid: Int32, _ path: String, _ args: [String], _ gbs: Double) -> ProcessSample {
-            ProcessSample(pid: pid, startSeconds: 1_700_000_000, uid: me, path: path, args: args, cwd: nil, footprint: Int64(gbs * Double(gb)))
+        func sample(_ pid: Int32, _ path: String, _ args: [String], _ gbs: Double, cwd: String? = nil) -> ProcessSample {
+            ProcessSample(pid: pid, startSeconds: 1_700_000_000, uid: me, path: path, args: args, cwd: cwd, footprint: Int64(gbs * Double(gb)))
         }
         let browser = [sample(41_001, "/Applications/Lumen Browser.app/Contents/MacOS/Lumen Browser", [], 1.2),
                        sample(41_002, "/Applications/Lumen Browser.app/Contents/Helpers/Lumen Helper", [], 3.1),
                        sample(41_003, "/Applications/Lumen Browser.app/Contents/Helpers/Lumen Helper", [], 2.4),
                        sample(41_004, "/Applications/Lumen Browser.app/Contents/Helpers/Lumen Helper", [], 1.4)]
-        let server = [sample(42_001, "/usr/local/bin/node", ["node", "dev-server.js"], 2.2), sample(42_002, "/usr/local/bin/node", ["node", "dev-server.js"], 1.8)]
+        let server = [sample(42_001, "/usr/local/bin/node", ["node", "dev-server.js"], 2.2, cwd: "/Users/you/projects"), sample(42_002, "/usr/local/bin/node", ["node", "dev-server.js"], 1.8, cwd: "/Users/you/projects")]
         let groups = [MemoryGroup(id: "app:/Applications/Lumen Browser.app", name: "Lumen Browser", processes: browser, bytes: browser.reduce(0) { $0 + $1.footprint }),
-                      MemoryGroup(id: "cli:node dev-server.js", name: "node dev-server.js", processes: server, bytes: server.reduce(0) { $0 + $1.footprint })]
+                      MemoryGroup(id: "runtime:node:/Users/you/projects", name: "node · projects", processes: server, bytes: server.reduce(0) { $0 + $1.footprint })]
         let physical = 16 * gb
         model.memory.isRed = true
         model.memory.usedPercent = 91
