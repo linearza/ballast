@@ -54,6 +54,7 @@ struct Popover: View {
         .padding(14)
         .frame(width: 320)
         .ballastSurface()
+        .background(PopoverFit())
         .task { if Screenshots.directory == nil { await model.memory.refreshForMenu() } }  // screenshots show made-up memory
     }
 
