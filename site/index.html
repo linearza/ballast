@@ -4,14 +4,14 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Ballast: get your disk space back from developer tools</title>
-<meta name="description" content="Ballast is a free, open-source menu bar app for macOS that finds the disk space developer tools leave behind, and gives it back safely.">
+<meta name="description" content="Ballast is a free, open-source menu bar app for macOS that finds the disk space developer tools leave behind, gives it back safely, and tells you what is using your memory when it runs short.">
 <meta name="color-scheme" content="dark light">
 <link rel="icon" href="icon.png">
 <link rel="apple-touch-icon" href="icon.png">
 <link rel="canonical" href="https://ballast.linear.co.za/">
 <meta property="og:type" content="website">
 <meta property="og:title" content="Ballast: get your disk space back from developer tools">
-<meta property="og:description" content="A free, open-source macOS menu bar app that finds the disk space developer tools leave behind, and gives it back safely.">
+<meta property="og:description" content="A free, open-source macOS menu bar app that finds the disk space developer tools leave behind, gives it back safely, and names what is using your memory when it runs short.">
 <meta property="og:url" content="https://ballast.linear.co.za/">
 <meta property="og:image" content="https://ballast.linear.co.za/screenshots/main.png">
 <meta name="twitter:card" content="summary_large_image">
@@ -28,6 +28,7 @@
   <div class="wrap">
     <a class="brand" href="#top"><img src="icon.png" width="28" height="28" alt="">Ballast</a>
     <nav aria-label="Main">
+      <a href="#memory">Memory</a>
       <a href="#safety">Safety</a>
       <a href="#tour">Tour</a>
       <a href="#finds">What it finds</a>
@@ -43,7 +44,7 @@
   <div class="wrap">
     <div>
       <h1>Get your disk space back without breaking a project.</h1>
-      <p class="lede">Old Ruby versions, idle <code>node_modules</code>, simulator runtimes, Docker cache, models you tried once. Ballast finds them, checks what's still in use, and shows every step before it runs anything.</p>
+      <p class="lede">Old Ruby versions, idle <code>node_modules</code>, simulator runtimes, Docker cache, models you tried once. Ballast finds them, checks what's still in use, and shows every step before it runs anything. When memory runs short, it also names what's using it.</p>
       <div class="cta-row">
         <a class="btn primary" href="https://github.com/linearza/ballast/releases/latest">Download for macOS</a>
         <a class="btn" href="https://github.com/linearza/ballast">View on GitHub</a>
@@ -66,6 +67,25 @@
         <span class="rest">plus 22.42 GB that needs a look first</span>
       </div>
     </figure>
+  </div>
+</section>
+
+<section id="memory">
+  <div class="wrap">
+    <h2>When memory runs short, it says what's using it.</h2>
+    <div class="phone">
+      <ul>
+        <li><b>The icon changes.</b> It becomes a memory chip with the percentage in use. No notification, no sound.</li>
+        <li><b>The menu names the culprit.</b> The app or process group using the most, how much and its share, and recent growth where measured. Command-line tools are grouped per project folder, like <code>vitest · my-app</code>.</li>
+        <li><b>Close asks first.</b> Force Quit is a separate second question, and nothing is ever closed automatically.</li>
+        <li><b>It says what it can't see.</b> macOS's own and other users' processes can't be measured, so it won't name them as the cause.</li>
+        <li><b>Light and local.</b> About 28 MB and next to no CPU. Nothing about memory is written to disk.</li>
+      </ul>
+      <figure class="shot narrow" style="margin:0"><picture>
+        <source media="(prefers-color-scheme: dark)" srcset="screenshots/menu-memory-dark.png">
+        <img src="screenshots/menu-memory.png" width="800" height="1132" loading="lazy" decoding="async" alt="The Ballast menu while memory is strained: Memory 91% used, then a browser and a dev server with their sizes, each with a Close button">
+      </picture></figure>
+    </div>
   </div>
 </section>
 
@@ -212,7 +232,7 @@
     <div class="panel menu-panel" id="p-menu" role="tabpanel" aria-labelledby="t-menu" tabindex="0">
       <div>
         <h3>Menu bar</h3>
-        <p class="cap">Free space in the menu bar. Click it for the biggest concerns, what's safe to reclaim and a connected iPhone's storage. Only one copy runs at a time; opening it again focuses the existing window.</p>
+        <p class="cap">Free space in the menu bar. Click it for the biggest concerns, what's safe to reclaim and a connected iPhone's storage. When memory runs short the icon shows a memory chip instead; see <a href="#memory">memory alerts</a>. Only one copy runs at a time; opening it again focuses the existing window.</p>
       </div>
       <figure class="shot narrow"><picture>
         <source media="(prefers-color-scheme: dark)" srcset="screenshots/menu-dark.png">

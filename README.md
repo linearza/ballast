@@ -15,11 +15,26 @@
 
 ## What is Ballast?
 
-Ballast is a menu bar app for macOS. It finds the disk space developer tools leave behind and gives it back safely: old Ruby and Node versions, `node_modules` in projects you forgot about, simulator runtimes, Docker images, package caches, AI models you tried once, and the videos filling up your iPhone. It also warns you when your Mac is running out of memory and tells you what's using it.
+Ballast is a menu bar app for macOS. It finds the disk space developer tools leave behind and gives it back safely: old Ruby and Node versions, `node_modules` in projects you forgot about, simulator runtimes, Docker images, package caches, AI models you tried once, and the videos filling up your iPhone. It also watches memory: when your Mac is running short, the menu bar icon changes and the menu names the app using the most, so you can close it. See [Memory alerts](#memory-alerts).
 
 It's for developers whose Mac keeps filling up. Most clean-up apps either can't see this kind of clutter or can't tell what's still in use. Ballast knows which version your projects pin, which worktree still has unpushed work and which database is running. It labels every item by risk (*Regenerable*, *Review* or *Your data*) and shows you every step before it does anything.
 
 Ballast is free, open source and private: it needs no account, has no analytics, and nothing leaves your Mac apart from a daily check of GitHub for a newer release.
+
+## Memory alerts
+
+When memory gets tight, the menu bar icon changes to a memory chip with the percentage in use. Click it and the menu names the app or group of processes using the most (say 59 VS Code processes, or `vitest · my-app` per project folder), how much that is, its share of memory and, where Ballast has measured it, how much it grew lately. Each comes with a **Close** button.
+
+<p align="center">
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/menu-memory-dark.png">
+  <img src="docs/screenshots/menu-memory.png" alt="The Ballast menu while memory is strained: Memory 91% used, then a browser and a dev server with their sizes, each with a Close button" width="400">
+</picture>
+</p>
+
+It's only the icon: no notification, no sound, nothing in your way. **Close** asks first, and nothing is ever closed automatically. For an app it asks the app to quit, and offers **Force Quit**, as a second and separate question, only if it's still running after 5 seconds. For a group of command-line processes it asks them to stop, and offers **Force Stop** only if some are still running after 3 seconds. Ballast only offers Close for your own apps and processes. It never closes macOS's own processes, other users' or root's processes, or Ballast itself.
+
+Ballast can't measure what's inside macOS's or other users' processes, so it can't name them as the cause; it says so when nothing it can measure stands out. It reads overall memory every 30 seconds and when macOS reports memory pressure, and looks at individual apps only when memory is getting full or you open the menu. It stays light: about 28 MB of memory and next to no CPU. Nothing about memory is written to disk or sent anywhere. Quiet mode stops the checks.
 
 ## Get started
 
@@ -98,16 +113,7 @@ The menu bar icon shows free space at a glance. Click it for a summary of the bi
   <img src="docs/screenshots/iphone.png" alt="Connected iPhone: a storage bar split into photos and videos, apps, iOS, not visible over USB and free, then large videos and apps with two videos and one app ticked">
 </picture>
 
-**Memory alerts** change the menu bar icon to a memory chip, with how much memory is in use beside it, when your Mac is running short. Click it and the menu names the app or group of processes using the most memory, how much that is, its share of memory and, where Ballast has measured it, how much it grew lately, each with a **Close** button. Command-line tools are grouped per project folder, like `vitest · my-app`. It's only the icon: no notification, no sound, nothing in your way. Ballast reads overall memory every 30 seconds and when macOS reports memory pressure, and looks at individual apps only when memory is getting full or you open the menu. It stays light: about 28 MB of memory and next to no CPU.
-
-<p align="center">
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/menu-memory-dark.png">
-  <img src="docs/screenshots/menu-memory.png" alt="The Ballast menu while memory is strained: Memory 91% used, then a browser and a dev server with their sizes, each with a Close button" width="400">
-</picture>
-</p>
-
-**Close** asks first, and never closes anything automatically. For an app it asks the app to quit, and offers **Force Quit**, as a second and separate question, only if it's still running after 5 seconds. For a group of command-line processes it asks them to stop, and offers **Force Stop** only if some are still running after 3 seconds. Ballast only offers Close for your own apps and processes. It never closes macOS's own processes, other users' or root's processes, or Ballast itself. Ballast can't measure what's inside macOS's or other users' processes, so it can't name them as the cause; it says so when nothing it can measure stands out. Nothing about memory is written to disk or sent anywhere. Quiet mode stops the checks.
+**Memory alerts** have their own section near the top: see [Memory alerts](#memory-alerts).
 
 ## Safety in detail
 
