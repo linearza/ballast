@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.5.7 — 2026-11-09
+
+- **No more gap above the menu.** After a memory alert cleared, the menu could open with an empty strip above it. It now fits its contents again.
+
 ## 0.5.6 — 2026-11-09
 
 - **Memory alerts.** When your Mac's memory gets tight, the menu bar icon changes and shows how much is in use. Open the menu and it names the app or group of processes using the most, how much that is and its share of memory, and how much it has grown lately when Ballast has measured that. Tools are grouped per project folder, like `vitest · my-app`. *Close* asks first, and *Force Quit* is a separate question, asked only if the app won't quit. Ballast can't measure macOS's own or other users' processes, and says so. It stays light: about 28 MB, almost no CPU, and it barely looks at your apps while memory is fine.
