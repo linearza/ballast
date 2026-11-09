@@ -210,7 +210,7 @@ h1 { font-size: clamp(2.5rem, 6.2vw, 4.6rem); font-weight: 700; letter-spacing: 
 .cat summary { cursor: pointer; color: var(--muted); font-size: 0.85rem; list-style: none; padding: 4px 0; }
 .cat summary::after { content: " +"; color: var(--accent); font-family: var(--mono); }
 .cat details[open] summary::after { content: " \2212"; }
-@media (min-width: 720px) { .cat summary { display: none; } }
+.cat summary { display: none; }
 .chips { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0 0; padding: 0; list-style: none; }
 .chips li { font: 400 0.78rem/1.4 var(--mono); padding: 3px 9px; border-radius: 6px; background: var(--bg-3); border: 1px solid var(--line); color: var(--text); }
 .cat.count { background: transparent; border-style: dashed; align-content: center; }
@@ -219,6 +219,7 @@ h1 { font-size: clamp(2.5rem, 6.2vw, 4.6rem); font-weight: 700; letter-spacing: 
 /* ---------- iphone ---------- */
 .phone { display: grid; gap: clamp(28px, 5vw, 64px); align-items: center; margin-top: 40px; }
 @media (min-width: 900px) { .phone { grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); } }
+.phone.top { align-items: start; }
 .phone ul { margin: 0; padding: 0; list-style: none; display: grid; gap: 0; }
 .phone li { padding: 13px 0; border-top: 1px solid var(--line); color: var(--muted); font-size: 0.98rem; }
 .phone li:first-child { border-top: 0; padding-top: 0; }
