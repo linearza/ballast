@@ -4,61 +4,33 @@
 
 <h1 align="center">Ballast</h1>
 
-<p align="center"><strong>Get your disk space back without breaking a project.</strong></p>
+<p align="center">Get your disk space back from your developer tools, without breaking a project.</p>
 
-<p align="center"><a href="https://ballast.linear.co.za">ballast.linear.co.za</a> · <a href="https://github.com/linearza/ballast/releases/latest">Download</a></p>
+<p align="center">
+  <a href="https://ballast.linear.co.za">Website</a> ·
+  <a href="https://github.com/linearza/ballast/releases/latest">Download</a> ·
+  <a href="CHANGELOG.md">Changelog</a>
+</p>
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/main-dark.png">
   <img src="docs/screenshots/main.png" alt="Ballast's main window listing Ruby versions, with the default and pinned versions marked and three old versions ticked for removal">
 </picture>
 
-## What is Ballast?
+Ballast is a free, open-source menu bar app for macOS. It finds old Ruby and Node versions, idle `node_modules`, simulator runtimes, Docker images, package caches, AI models and iPhone videos, and removes the ones nothing uses.
 
-Ballast is a menu bar app for macOS. It finds the disk space developer tools leave behind and gives it back safely: old Ruby and Node versions, `node_modules` in projects you forgot about, simulator runtimes, Docker images, package caches, AI models you tried once, and the videos filling up your iPhone. It also watches memory: when your Mac is running short, the menu bar icon changes and the menu names the app using the most, so you can close it. See [Memory alerts](#memory-alerts).
+## Features
 
-It's for developers whose Mac keeps filling up. Most clean-up apps either can't see this kind of clutter or can't tell what's still in use. Ballast knows which version your projects pin, which worktree still has unpushed work and which database is running. It labels every item by risk (*Regenerable*, *Review* or *Your data*) and shows you every step before it does anything.
+- Memory alerts that name what's using your RAM, with a Close button
+- Knows which versions your projects pin, which worktrees have unpushed work and which databases are running
+- Lists every path and command before anything runs
+- Labels every item *Regenerable*, *Review* or *Your data*
+- Covers 60+ tools, from rvm to Ollama
+- Moves iPhone videos to your Mac over USB
+- No account, no analytics, no permissions up front
 
-Ballast is free, open source and private: it needs no account, has no analytics, and nothing leaves your Mac apart from a daily check of GitHub for a newer release.
-
-## Memory alerts
-
-When memory gets tight, the menu bar icon changes to a memory chip with the percentage in use. Click it and the menu names the app or group of processes using the most (say 59 VS Code processes, or `vitest · my-app` per project folder), how much that is, its share of memory and, where Ballast has measured it, how much it grew lately. Each comes with a **Close** button.
-
-<p align="center">
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/menu-memory-dark.png">
-  <img src="docs/screenshots/menu-memory.png" alt="The Ballast menu while memory is strained: Memory 91% used, then a browser and a dev server with their sizes, each with a Close button" width="400">
-</picture>
-</p>
-
-It's only the icon: no notification, no sound, nothing in your way. **Close** asks first, and nothing is ever closed automatically. For an app it asks the app to quit, and offers **Force Quit**, as a second and separate question, only if it's still running after 5 seconds. For a group of command-line processes it asks them to stop, and offers **Force Stop** only if some are still running after 3 seconds. Ballast only offers Close for your own apps and processes. It never closes macOS's own processes, other users' or root's processes, or Ballast itself.
-
-Ballast can't measure what's inside macOS's or other users' processes, so it can't name them as the cause; it says so when nothing it can measure stands out. It reads overall memory every 30 seconds and when macOS reports memory pressure, and looks at individual apps only when memory is getting full or you open the menu. It stays light: about 28 MB of memory and next to no CPU. Nothing about memory is written to disk or sent anywhere. Quiet mode stops the checks.
-
-## Get started
-
-1. **Download** the latest `Ballast-x.y.z.zip` from [Releases](https://github.com/linearza/ballast/releases/latest). It needs macOS 14 or later. Unzip it, move `Ballast.app` to `~/Applications` or `/Applications` and open it. Ballast isn't notarised, so macOS blocks it the first time: see [From a release](#from-a-release) for the one-step fix. Prefer to build it yourself? See [From source](#from-source).
-2. **Pick your project folders.** On first run Ballast asks where your projects live, so it never suggests removing a version they need. See [First run](#first-run).
-3. **Look for the icon in the menu bar.** It shows free space at a glance (and changes if memory runs short), and Ballast scans in the background.
-4. **Review.** Click the icon for what's safe to reclaim, or open the window and tick what you want to go.
-5. **Remove.** Ballast lists every step first. Confirm, and the space comes back.
-
-Ballast asks for no permissions up front. **Full Disk Access** is only needed for a few protected locations (some app containers and the Docker disk image); Ballast shows those as locked and explains how to grant access if you want them measured. More under [Permissions](#permissions).
-
-## How it keeps you safe
-
-- **A preview first.** Nothing happens until you've seen every path it will move and every command it will run.
-- **A re-check before acting.** If something changed since the scan (a project now pins a version, a worktree has new changes, a database is running), that step is skipped and the reason is shown.
-- **Undo is spelled out.** Files go to the Trash. Commands a tool runs for itself delete for good, and the step says so.
-- **It asks harder the more you could lose.** Anything that can lose your work sits under **Read this first**, and Remove stays off until you tick **I understand**.
-- **In-use versions are protected.** Versions your projects pin or you use by default are marked and never ticked by **Select safe**.
-- **Some folders are never removed:** your home folder, your SSH and GPG keys and macOS's own folders.
-- **Every action is logged** to `~/Library/Application Support/Ballast/actions.log`.
-
-The full list is under [Safety in detail](#safety-in-detail).
-
-## What it finds
+<details>
+<summary>Everything it finds</summary>
 
 | | |
 |---|---|
@@ -70,13 +42,70 @@ The full list is under [Safety in detail](#safety-in-detail).
 | **Local databases** | Postgres, MySQL, Redis and others from Homebrew, Postgres.app and DBngin |
 | **AI models** | Ollama, Hugging Face, Whisper, LM Studio, GPT4All, Jan, llama.cpp, DiffusionBee and PyTorch Hub models |
 | **AI tools and editors** | Caches and old workspace data of Cursor, VS Code, Windsurf and the Claude app, old Claude Code versions, and Claude Code history for projects that no longer exist |
-| **Apps** | Your apps with their size and when you last opened them, removed together with their leftovers and background helpers |
-| **Connected iPhone** | What's using an iPhone's storage over USB, its biggest videos and photos (moved to your Mac before they're deleted from the phone) and its apps (uninstalled with their data). It shows up as soon as you plug the phone in |
+| **Apps** | Your apps with their size and when you last opened them, removed with their leftovers and background helpers |
+| **Connected iPhone** | Storage use over USB, the biggest videos and photos, and apps |
 | **Large personal files** | The biggest files in your home folder, only when you ask, with files in iCloud Drive marked |
 
-## A quick tour
+</details>
 
-The menu bar icon shows free space at a glance. Click it for a summary of the biggest concerns and what's safe to reclaim, plus a connected iPhone's storage and the Trash's size with an Empty button (the main window's sidebar has the same; an empty Trash says *Empty* and the button is off), or open the main window to review and remove things. Only one copy of Ballast runs at a time: opening it again brings up the window of the one already running.
+## Install
+
+Requires macOS 14 or later.
+
+### Download
+
+Download `Ballast-x.y.z.zip` from [Releases](https://github.com/linearza/ballast/releases/latest), unzip it, and move `Ballast.app` to `~/Applications` or `/Applications`.
+
+Ballast isn't notarised, so macOS blocks the first launch. Click **Open Anyway** in **System Settings → Privacy & Security**, or run:
+
+```sh
+xattr -dr com.apple.quarantine ~/Applications/Ballast.app
+```
+
+### Build from source
+
+Needs Swift 6. The Command Line Tools are enough (`xcode-select --install`).
+
+```sh
+git clone https://github.com/linearza/ballast.git
+cd ballast
+make install
+```
+
+This builds Ballast, copies it to `~/Applications` and opens it. The bundled iPhone tools are built too, which takes a few minutes the first time and needs `brew install cmake pkg-config`. Without them the app still builds and uses the tools on your PATH. `make release` always builds them.
+
+<details>
+<summary>Build fails with <code>Invalid manifest</code></summary>
+
+If you see `Undefined symbols … PackageDescription.Package`, your Swift compiler and package library come from different Command Line Tools versions, usually after a macOS update. Reinstall them:
+
+```sh
+sudo rm -rf /Library/Developer/CommandLineTools
+xcode-select --install
+```
+
+With Xcode installed, `sudo xcode-select -s /Applications/Xcode.app` works too.
+
+</details>
+
+### Updates
+
+Ballast checks GitHub once a day and shows *Update to x.y.z* in the menu and Settings when a release is out. One click downloads it, verifies it and relaunches.
+
+<details>
+<summary>How updates are checked</summary>
+
+The zip comes only from `github.com` and GitHub's release-asset hosts, over https. Before swapping it in, Ballast checks that it is Ballast, is the version offered, is newer than the running one, and passes `codesign --verify`. Any failed check leaves your copy untouched. The old copy goes to the Trash. It won't update during a clean-up, never asks for your password (if its folder isn't writable, it tells you to download the release yourself), and logs updates in `actions.log`. *Check for updates* is in Settings and the gear menu. Quiet mode silences the notification.
+
+</details>
+
+## Usage
+
+1. On first run, pick the folders where your projects live. Ballast reads `.ruby-version`, `.nvmrc`, `.tool-versions`, `mise.toml` and `package.json` there to see which versions are in use. Change them in Settings any time.
+2. The menu bar icon shows free space. Click it for what's safe to reclaim, the biggest concerns, a connected iPhone and the Trash.
+3. Open the window, tick what you want gone, review the steps and confirm.
+
+Only one copy runs at a time. Opening it again brings up the existing window.
 
 <p align="center">
 <picture>
@@ -85,118 +114,25 @@ The menu bar icon shows free space at a glance. Click it for a summary of the bi
 </picture>
 </p>
 
-**Safe to reclaim** gathers everything Ballast is sure you can remove: caches, old downloads and build output that come back when needed, and nothing you use. Review and remove a group at a time.
+### Memory alerts
 
+When memory runs short, the icon becomes a memory chip with the percentage in use. The menu lists the apps or process groups using the most, with size, share and recent growth, each with a **Close** button. Command-line tools are grouped per project folder, like `vitest · my-app`.
+
+<p align="center">
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/safe-dark.png">
-  <img src="docs/screenshots/safe.png" alt="Safe to reclaim: 38.75 GB of simulator runtimes, package caches and old Ruby versions, grouped by tool, each group with a Review and remove button">
+  <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/menu-memory-dark.png">
+  <img src="docs/screenshots/menu-memory.png" alt="The Ballast menu while memory is strained: Memory 91% used, then a browser and a dev server with their sizes, each with a Close button" width="400">
 </picture>
+</p>
 
-**Project leftovers** shows which `node_modules` and other build folders belong to projects you haven't touched in a while, and which git worktrees are done with: their pull request is merged and nothing is left uncommitted or unpushed.
+There's no notification or sound. Close asks first and nothing closes automatically. An app gets **Force Quit** as a separate question if it's still running after 5 seconds; a process group gets **Force Stop** after 3. Close is offered only for your own apps and processes, never for macOS's, other users', root's or Ballast itself.
 
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/projects-dark.png">
-  <img src="docs/screenshots/projects.png" alt="Project leftovers: idle node_modules folders and git worktrees, badged with merged or open pull requests and uncommitted changes">
-</picture>
+Ballast can't measure macOS's or other users' processes, and says so when nothing it can measure stands out. It reads overall memory every 30 seconds and on macOS memory-pressure events, and looks at individual apps only when memory is getting full or the menu is open. It uses about 28 MB and next to no CPU. Nothing about memory is saved or sent. Quiet mode stops the checks.
 
-**AI models** lists every model you've downloaded, wherever the tool put it. Ollama models are removed with `ollama rm`, and a blob two models share stays until neither needs it.
+### Settings
 
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/models-dark.png">
-  <img src="docs/screenshots/models.png" alt="AI models: Ollama, Hugging Face and LM Studio models with their sizes, two ticked for removal">
-</picture>
-
-**Connected iPhone** appears when an iPhone is plugged in. It shows how the storage is used, then lists the videos and large photos in the camera roll and the apps, biggest first. Videos and photos are moved to your Mac, not just deleted. Over USB a Mac can't see everything Settings › General › iPhone Storage does: app sizes here include caches iOS clears by itself, and Messages, apps' shared data and System Data show up together as *Not visible over USB*.
-
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/iphone-dark.png">
-  <img src="docs/screenshots/iphone.png" alt="Connected iPhone: a storage bar split into photos and videos, apps, iOS, not visible over USB and free, then large videos and apps with two videos and one app ticked">
-</picture>
-
-**Memory alerts** have their own section near the top: see [Memory alerts](#memory-alerts).
-
-## Safety in detail
-
-Ballast is built so that cleaning up is hard to regret.
-
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/confirm-dark.png">
-  <img src="docs/screenshots/confirm.png" alt="The confirmation sheet: a Read this first box saying Ruby 3.2.2 is pinned by billing-api, an I understand checkbox, and each command marked Deleted for good">
-</picture>
-
-- **Nothing happens without a preview.** You tick items, then see every step Ballast will take (each path it will move and each command it will run) before you confirm.
-- **It checks again before acting.** Just before running, Ballast re-checks each item. If something changed since the scan (a version is now pinned by a project, a worktree has new changes, a database is running), that step is skipped and the reason is shown.
-- **Each step says whether it can be undone.** Files go to the Trash, so you can put them back. Commands a tool runs for itself (`brew uninstall`, `docker image rm` and the like) delete for good, and the step says so.
-- **The more it matters, the more Ballast asks.** Routine clean-ups confirm with Return. Anything that needs a look (a *Review* item or a warning) needs a click on Remove. Anything that can lose your work (your data, a version a project pins or you use by default, a Docker volume, an app's saved data, a database's files) lists what's at stake under **Read this first**, and Remove stays off until you tick **I understand**.
-- **Some folders are never removed,** whatever a scan finds: your home folder and its Documents, Desktop, Downloads, Library and the like, your SSH and GPG keys and Keychains, and macOS's own folders.
-- **Build folders your project commits to git** (a checked-in `Pods` or `dist`) are source, not leftovers, and aren't offered. Build folders under 1 MB aren't listed either: they're not worth the risk of a second look.
-- **Files in iCloud Drive are flagged.** When your Desktop or Documents sync with iCloud, a large file there is marked *in iCloud*, and removing it needs **I understand**: the Trash on one Mac removes it from every device.
-- **Breakage elsewhere is named.** Removing a Python version lists the pipx apps and Poetry, Pipenv or Hatch environments built on it, which stop working until you reinstall them. Uninstalling RVM names the Rubies you use by default or projects pin.
-- **Background helpers are stopped first.** When you remove an app, any helper it left running in `~/Library/LaunchAgents` is stopped before its file goes to the Trash, so nothing keeps running from a deleted app.
-- **Tools clean up their own data.** Where a tool has its own way to remove something (`brew uninstall`, `docker image rm`, `ollama rm`, `git worktree remove`, `xcrun simctl delete`), Ballast uses it, so the tool's own records stay correct.
-- **Some things are refused outright:** a worktree with uncommitted changes, a database or virtual machine that's running, an editor's own settings database, an app that ships with macOS. The reason is shown next to the item.
-- **Versions your projects pin are marked.** Removing a language version a project pins names the project and asks you to confirm you understand, and the version is never ticked by **Select safe**.
-- **Each item has a risk level.** *Regenerable* means it can be rebuilt or re-downloaded, *Review* means you should look first, and *Your data* means only you can say whether it's needed. **Select safe** ticks only the regenerable ones, and **Safe to reclaim** at the top of the list (or in the menu) shows all of them in one place.
-- **Videos leave an iPhone only after a checked copy.** Ballast copies each one to your Mac, compares the copy's size with what the iPhone reports, and deletes the original only if they match. If they don't, the file stays on the iPhone and the bad copy is removed.
-- **iCloud Photos is named.** With it on, deleting from the iPhone deletes from iCloud and your other devices too. Moving a video says so and needs **I understand**. The copies on the Mac stay.
-- **Uninstalling an iPhone app deletes its data.** You can reinstall the app, but its data comes back only if the app syncs it somewhere.
-- Every action is logged to `~/Library/Application Support/Ballast/actions.log`.
-
-## Permissions
-
-Ballast asks for nothing up front. It reads your home folder like any app you run. If a step needs more, it says so when you reach that step:
-
-- **Full Disk Access** is only needed for protected locations (some app containers and the Docker disk image). Ballast shows those items as locked and explains how to grant access if you want them measured.
-- **Administrator steps,** such as removing Docker's system helpers, are never run for you. Ballast shows the exact `sudo` command for you to run in Terminal.
-- **Finder** is used to empty the Trash and to read its size when Ballast can't read the Trash folder itself, so you don't need Full Disk Access for it. macOS asks whether Ballast can control Finder the first time you click Empty, and Ballast only asks Finder in the background once you've allowed it. If you said no, Ballast offers to open **Privacy & Security → Automation** so you can allow it.
-- **Your iPhone** is read with libimobiledevice, whose tools are built into Ballast, so there is nothing to install. The iPhone has to be unlocked and trusted. Moving videos and photos goes through Image Capture, so macOS may ask whether Ballast can open the iPhone's photos the first time; if you said no, Ballast offers to open **Privacy & Security**.
-- **Memory alerts** need no permission. Ballast reads the size and name of your own processes, and the folder each one runs in, to name what's using memory. That stays on your Mac and isn't saved.
-- **The network** is used for two things only: a daily check of GitHub for a newer Ballast (plus downloading it when you press *Update*), and, if you have the GitHub CLI (`gh`) signed in, asking GitHub whether a worktree's pull request is merged.
-
-## Install
-
-### From source
-
-You need macOS 14 or later and Swift 6. The Command Line Tools are enough (`xcode-select --install`); you don't need Xcode.
-
-```sh
-git clone https://github.com/linearza/ballast.git
-cd ballast
-make install
-```
-
-This builds Ballast, copies it to `~/Applications` and opens it.
-
-The iPhone tools are built from source on the way, which takes a few minutes the first time and needs `cmake` and `pkg-config` (`brew install cmake pkg-config`). Without them the app still builds and looks for the tools on your PATH instead. `make release` always builds them.
-
-If the build stops at `Invalid manifest` with `Undefined symbols … PackageDescription.Package`, your Swift compiler and its package library come from different versions of the Command Line Tools, usually after a macOS update. Reinstall them and build again:
-
-```sh
-sudo rm -rf /Library/Developer/CommandLineTools
-xcode-select --install
-```
-
-If you have Xcode, `sudo xcode-select -s /Applications/Xcode.app` works too. Or skip building and install [from a release](#from-a-release).
-
-### From a release
-
-Download `Ballast-x.y.z.zip` from [Releases](https://github.com/linearza/ballast/releases), unzip it, and move `Ballast.app` to `~/Applications` or `/Applications`.
-
-Ballast is not notarised, so macOS blocks it the first time. Either open **System Settings → Privacy & Security** and click **Open Anyway**, or run:
-
-```sh
-xattr -dr com.apple.quarantine ~/Applications/Ballast.app
-```
-
-Ballast checks GitHub once a day for a newer release. When there is one, it sends a notification and shows *Update to x.y.z* in the menu and in Settings, beside a *What's new* link. *Check for updates* in Settings and the gear menu looks right away. It stays silent in quiet mode.
-
-*Update to x.y.z* downloads the release's zip from GitHub (only `github.com` and GitHub's release-asset hosts, over https), unzips it, and checks that it is Ballast, is the version offered, is newer than the one running, and passes `codesign --verify`. Then it swaps it in for the running copy (the old one goes to the Trash) and relaunches. Any failed check leaves your current copy untouched. It won't start while a clean-up is running, and it never asks for your password: if the folder Ballast lives in isn't writable, it says so and you download the release yourself. Updates are logged in `actions.log`.
-
-## First run
-
-Ballast asks where your projects live. It uses those folders to see which language versions your projects need (from files like `.ruby-version`, `.nvmrc`, `.tool-versions`, `mise.toml` and `package.json`), so it never suggests removing one that's in use, and to find project leftovers. You can change the folders in Settings at any time.
-
-## Settings
+<details>
+<summary>All settings</summary>
 
 <p align="center">
 <picture>
@@ -206,12 +142,58 @@ Ballast asks where your projects live. It uses those folders to see which langua
 </p>
 
 - Project folders
-- How often to rescan in the background: off, every 6 hours or every 24 hours
-- When to warn about low free space (10% by default)
-- How long a project must be idle before its build output (`node_modules`, `target`, `.venv` and the like) counts as safe (60 days by default)
-- Where videos and photos moved off an iPhone go (`~/Pictures/From iPhone` by default)
+- Background rescans: off, every 6 hours or every 24 hours
+- Low free space warning: 10% by default
+- Idle time before build output (`node_modules`, `target`, `.venv`) counts as safe: 60 days by default
+- Where iPhone videos and photos go: `~/Pictures/From iPhone` by default
 - Open at login
-- Quiet mode: no menu bar icon and no notifications, while background rescans carry on. **Go Quiet…** in the menu's gear menu turns it on too. It stays on until you turn it off. While quiet, open Ballast from Applications or Spotlight to see its window, and press ⌘, for Settings.
+- Quiet mode hides the menu bar icon and stops notifications; background rescans carry on. **Go Quiet…** in the gear menu turns it on too. While quiet, open Ballast from Applications or Spotlight, and press ⌘, for Settings.
+
+</details>
+
+## Safety
+
+Every removal shows each path it will move and each command it will run before you confirm. Ballast checks each item again just before it runs, and skips anything that changed since the scan.
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/confirm-dark.png">
+  <img src="docs/screenshots/confirm.png" alt="The confirmation sheet: a Read this first box saying Ruby 3.2.2 is pinned by billing-api, an I understand checkbox, and each command marked Deleted for good">
+</picture>
+
+- *Regenerable* items rebuild or re-download. *Review* items need a look. *Your data* is your call. **Select safe** ticks only Regenerable items.
+- Files go to the Trash. Tool commands (`brew uninstall`, `docker image rm`) delete for good, and the step says so.
+- Routine removals confirm with Return, Review items with a click. Anything that can lose work sits under **Read this first** and needs **I understand**.
+- Every action is logged to `~/Library/Application Support/Ballast/actions.log`.
+
+<details>
+<summary>Safety in detail</summary>
+
+- Your home folder and its Documents, Desktop, Downloads and Library, SSH and GPG keys, Keychains and macOS's own folders are never removed.
+- Worktrees with uncommitted changes, running databases and VMs, editor settings databases and apps that ship with macOS are refused.
+- Pinned versions are never ticked by Select safe. Removing one names the project and needs I understand, as do default versions, Docker volumes, app data and database files.
+- Worktrees count as done only when the PR is merged and nothing is uncommitted or unpushed.
+- Committed build folders (a checked-in `Pods` or `dist`) are source and aren't offered. Build folders under 1 MB aren't listed.
+- iCloud Drive files are marked *in iCloud* and need I understand, since the Trash on one Mac removes them everywhere.
+- Removing a Python version lists the pipx apps and Poetry, Pipenv or Hatch environments built on it. Uninstalling RVM names Rubies in use.
+- App helpers in `~/Library/LaunchAgents` are stopped before the app goes to the Trash.
+- Where a tool has its own removal command (`brew uninstall`, `docker image rm`, `ollama rm`, `git worktree remove`, `xcrun simctl delete`), Ballast uses it. An Ollama blob two models share stays until neither needs it.
+- iPhone videos are copied to your Mac and size-checked before the original is deleted. On a mismatch the original stays and the bad copy is removed.
+- With iCloud Photos on, deleting from the iPhone deletes from iCloud and your other devices. The Mac copies stay.
+- Uninstalling an iPhone app deletes its data. It comes back on reinstall only if the app syncs it.
+- Over USB, iPhone app sizes include caches iOS clears itself, and Messages, shared app data and System Data show as *Not visible over USB*.
+
+</details>
+
+## Permissions
+
+Nothing up front. Ballast reads your home folder like any app you run.
+
+- **Full Disk Access** is only for a few protected locations (some app containers, the Docker disk image). They show as locked, with steps to grant access.
+- **Administrator steps** are never run for you. You get the exact `sudo` command.
+- **Finder** empties the Trash and reads its size. macOS asks the first time you click Empty; if you said no, Ballast opens **Privacy & Security → Automation**.
+- **iPhone** access uses libimobiledevice, built in. The phone must be unlocked and trusted. Photos and videos go through Image Capture, which macOS may ask about.
+- **Memory alerts** read the size, name and working folder of your own processes. Nothing is saved.
+- **Network:** a daily GitHub release check (plus the download when you update), and, if the GitHub CLI (`gh`) is signed in, whether a worktree's PR is merged.
 
 ## Uninstall
 
@@ -219,21 +201,19 @@ Ballast asks where your projects live. It uses those folders to see which langua
 make uninstall
 ```
 
-This quits Ballast, moves the app to the Trash and removes `~/Library/Application Support/Ballast`. Or drag `Ballast.app` to the Trash yourself.
+Quits Ballast, moves it to the Trash and removes `~/Library/Application Support/Ballast`. Or drag `Ballast.app` to the Trash.
 
 ## Development
 
 ```sh
-make test      # run the tests
-make app       # build dist/Ballast.app
-make icon      # re-render Resources/AppIcon.icns
-make release   # universal build and dist/Ballast-<version>.zip
+make test         # run the tests
+make app          # build dist/Ballast.app
+make icon         # re-render Resources/AppIcon.icns
+make release      # universal build and dist/Ballast-<version>.zip
 make screenshots  # re-render docs/screenshots from sample data
 ```
 
-The screenshots use made-up projects and sizes, not anything from the machine that renders them.
-
-The scanning and cleanup logic lives in `Sources/BallastCore` and is tested against fixture folders and a fake command runner. `Sources/Ballast` is the SwiftUI and AppKit app.
+Scanning and cleanup live in `Sources/BallastCore`, tested against fixture folders and a fake command runner. `Sources/Ballast` is the SwiftUI and AppKit app. Screenshots use made-up projects and sizes.
 
 ## Licence
 
@@ -241,8 +221,8 @@ MIT
 
 ### Official builds
 
-The only official Ballast is the one on this repository's [Releases](https://github.com/linearza/ballast/releases) page, built and published by its maintainer. The MIT licence lets you build, change and share your own copy. If you distribute a modified build, give it a different name, icon and bundle identifier (not `za.co.linear.ballast`), so nobody mistakes it for Ballast or gets it replaced by a Ballast update.
+The only official Ballast is on this repository's [Releases](https://github.com/linearza/ballast/releases) page, built and published by its maintainer. You're free to build, change and share your own copy. If you distribute a modified build, give it a different name, icon and bundle identifier (not `za.co.linear.ballast`), so nobody mistakes it for Ballast or has it replaced by a Ballast update.
 
 ### Third-party software
 
-The release download carries four command-line tools in `Ballast.app/Contents/Helpers` (`idevice_id`, `ideviceinfo`, `ideviceinstaller`, `afcclient`) to talk to an iPhone. They are built unmodified from the upstream libimobiledevice projects (libimobiledevice, libplist, libusbmuxd, libimobiledevice-glue, libtatsu and ideviceinstaller, under LGPL-2.1 or GPL-2), with libzip (BSD-3-Clause) and OpenSSL (Apache-2.0). The libraries are separate dylibs in `Ballast.app/Contents/Frameworks` that the tools load at run time rather than copies linked into them, so you can swap in your own build of any of them. Ballast runs them as separate programs and only talks to them through their command lines. The licence texts and a written offer of the source are in `Ballast.app/Contents/Resources/ThirdPartyNotices.txt`, and `scripts/vendor-imobiledevice.sh` builds them from the exact upstream tarballs, pinned by checksum.
+The release carries four command-line tools in `Ballast.app/Contents/Helpers` (`idevice_id`, `ideviceinfo`, `ideviceinstaller`, `afcclient`) to talk to an iPhone. They are built unmodified from the upstream libimobiledevice projects (libimobiledevice, libplist, libusbmuxd, libimobiledevice-glue, libtatsu and ideviceinstaller, under LGPL-2.1 or GPL-2), with libzip (BSD-3-Clause) and OpenSSL (Apache-2.0). The libraries are separate dylibs in `Ballast.app/Contents/Frameworks`, loaded at run time rather than linked in, so you can swap in your own build of any of them. Ballast runs the tools as separate programs and talks to them only through their command lines. Licence texts and a written offer of the source are in `Ballast.app/Contents/Resources/ThirdPartyNotices.txt`, and `scripts/vendor-imobiledevice.sh` builds them from the exact upstream tarballs, pinned by checksum.
