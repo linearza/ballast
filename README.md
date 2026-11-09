@@ -15,7 +15,7 @@
 
 ## What is Ballast?
 
-Ballast is a menu bar app for macOS. It finds the disk space developer tools leave behind and gives it back safely: old Ruby and Node versions, `node_modules` in projects you forgot about, simulator runtimes, Docker images, package caches, AI models you tried once, and the videos filling up your iPhone.
+Ballast is a menu bar app for macOS. It finds the disk space developer tools leave behind and gives it back safely: old Ruby and Node versions, `node_modules` in projects you forgot about, simulator runtimes, Docker images, package caches, AI models you tried once, and the videos filling up your iPhone. It also warns you when your Mac is running out of memory and tells you what's using it.
 
 It's for developers whose Mac keeps filling up. Most clean-up apps either can't see this kind of clutter or can't tell what's still in use. Ballast knows which version your projects pin, which worktree still has unpushed work and which database is running. It labels every item by risk (*Regenerable*, *Review* or *Your data*) and shows you every step before it does anything.
 
@@ -25,7 +25,7 @@ Ballast is free, open source and private: it needs no account, has no analytics,
 
 1. **Download** the latest `Ballast-x.y.z.zip` from [Releases](https://github.com/linearza/ballast/releases/latest). It needs macOS 14 or later. Unzip it, move `Ballast.app` to `~/Applications` or `/Applications` and open it. Ballast isn't notarised, so macOS blocks it the first time: see [From a release](#from-a-release) for the one-step fix. Prefer to build it yourself? See [From source](#from-source).
 2. **Pick your project folders.** On first run Ballast asks where your projects live, so it never suggests removing a version they need. See [First run](#first-run).
-3. **Look for the icon in the menu bar.** It shows free space at a glance, and Ballast scans in the background.
+3. **Look for the icon in the menu bar.** It shows free space at a glance (and changes if memory runs short), and Ballast scans in the background.
 4. **Review.** Click the icon for what's safe to reclaim, or open the window and tick what you want to go.
 5. **Remove.** Ballast lists every step first. Confirm, and the space comes back.
 
@@ -61,7 +61,7 @@ The full list is under [Safety in detail](#safety-in-detail).
 
 ## A quick tour
 
-The menu bar icon shows free space at a glance. Click it for a summary of the biggest concerns and what's safe to reclaim, plus a connected iPhone's storage, or open the main window to review and remove things. Only one copy of Ballast runs at a time: opening it again brings up the window of the one already running.
+The menu bar icon shows free space at a glance. Click it for a summary of the biggest concerns and what's safe to reclaim, plus a connected iPhone's storage and the Trash's size with an Empty button (the main window's sidebar has the same; an empty Trash says *Empty* and the button is off), or open the main window to review and remove things. Only one copy of Ballast runs at a time: opening it again brings up the window of the one already running.
 
 <p align="center">
 <picture>
@@ -98,6 +98,17 @@ The menu bar icon shows free space at a glance. Click it for a summary of the bi
   <img src="docs/screenshots/iphone.png" alt="Connected iPhone: a storage bar split into photos and videos, apps, iOS, not visible over USB and free, then large videos and apps with two videos and one app ticked">
 </picture>
 
+**Memory alerts** change the menu bar icon to a memory chip, with how much memory is in use beside it, when your Mac is running short. Click it and the menu names the app or group of processes using the most memory, how much that is, its share of memory and, where Ballast has measured it, how much it grew lately, each with a **Close** button. Command-line tools are grouped per project folder, like `vitest · my-app`. It's only the icon: no notification, no sound, nothing in your way. Ballast reads overall memory every 30 seconds and when macOS reports memory pressure, and looks at individual apps only when memory is getting full or you open the menu. It stays light: about 28 MB of memory and next to no CPU.
+
+<p align="center">
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/menu-memory-dark.png">
+  <img src="docs/screenshots/menu-memory.png" alt="The Ballast menu while memory is strained: Memory 91% used, then a browser and a dev server with their sizes, each with a Close button" width="400">
+</picture>
+</p>
+
+**Close** asks first, and never closes anything automatically. For an app it asks the app to quit, and offers **Force Quit**, as a second and separate question, only if it's still running after 5 seconds. For a group of command-line processes it asks them to stop, and offers **Force Stop** only if some are still running after 3 seconds. Ballast only offers Close for your own apps and processes. It never closes macOS's own processes, other users' or root's processes, or Ballast itself. Ballast can't measure what's inside macOS's or other users' processes, so it can't name them as the cause; it says so when nothing it can measure stands out. Nothing about memory is written to disk or sent anywhere. Quiet mode stops the checks.
+
 ## Safety in detail
 
 Ballast is built so that cleaning up is hard to regret.
@@ -131,8 +142,9 @@ Ballast asks for nothing up front. It reads your home folder like any app you ru
 
 - **Full Disk Access** is only needed for protected locations (some app containers and the Docker disk image). Ballast shows those items as locked and explains how to grant access if you want them measured.
 - **Administrator steps,** such as removing Docker's system helpers, are never run for you. Ballast shows the exact `sudo` command for you to run in Terminal.
-- **Finder** is used to empty the Trash, so macOS asks whether Ballast can control Finder the first time you click Empty Trash. If you said no, Ballast offers to open **Privacy & Security → Automation** so you can allow it.
+- **Finder** is used to empty the Trash and to read its size when Ballast can't read the Trash folder itself, so you don't need Full Disk Access for it. macOS asks whether Ballast can control Finder the first time you click Empty, and Ballast only asks Finder in the background once you've allowed it. If you said no, Ballast offers to open **Privacy & Security → Automation** so you can allow it.
 - **Your iPhone** is read with libimobiledevice, whose tools are built into Ballast, so there is nothing to install. The iPhone has to be unlocked and trusted. Moving videos and photos goes through Image Capture, so macOS may ask whether Ballast can open the iPhone's photos the first time; if you said no, Ballast offers to open **Privacy & Security**.
+- **Memory alerts** need no permission. Ballast reads the size and name of your own processes, and the folder each one runs in, to name what's using memory. That stays on your Mac and isn't saved.
 - **The network** is used for two things only: a daily check of GitHub for a newer Ballast (plus downloading it when you press *Update*), and, if you have the GitHub CLI (`gh`) signed in, asking GitHub whether a worktree's pull request is merged.
 
 ## Install

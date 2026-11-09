@@ -10,8 +10,7 @@ import UserNotifications
     var scanningIDs: Set<String> = []
     var free: Int64 = 0
     var total: Int64 = 0
-    /// Nil when macOS won't let Ballast read the Trash.
-    var trashBytes: Int64?
+    var trash: TrashState = .unknown
     /// The concern the main window shows.
     var selection: String?
     /// Ticked items, per concern.
@@ -25,6 +24,7 @@ import UserNotifications
     var iphone: IPhoneSnapshot?
     let prefs: Preferences
     let updates = UpdateCheck()
+    let memory = MemoryMonitor()
     let imageCapture = ImageCaptureTransfer()
     /// Shows the "Where are your projects?" sheet.
     var firstRun = false
@@ -48,6 +48,7 @@ import UserNotifications
             Task { await Screenshots.capture(self, to: dir) }
         } else {
             prefs = Preferences()
+            prefs.onQuietChange = { [weak self] in self?.syncMemoryMonitor() }
             Task { await launch() }
             startIPhoneWatcher()
         }
@@ -73,6 +74,7 @@ import UserNotifications
         UNUserNotificationCenter.current().delegate = NotificationClicks.shared
         summary = await scanner.lastSummary()
         refreshSpace()
+        syncMemoryMonitor()
         if !prefs.rootsConfirmed {
             firstRun = true
             Windows.shared.showMain(self)
@@ -81,6 +83,11 @@ import UserNotifications
         }
         await measureTrash()
         await updates.check(notifying: !prefs.quiet)
+    }
+
+    /// Quiet mode hides the icon, so there is nothing for the memory alert to show: watch only while it is visible.
+    func syncMemoryMonitor() {
+        if prefs.quiet { memory.stop() } else { memory.start() }
     }
 
     /// The first-run sheet's Continue.
@@ -174,9 +181,22 @@ import UserNotifications
         if let delay = IPhoneWatch.lockedRetryDelay(afterAttempt: lockedAttempts) { queueIPhoneRescan(after: delay) }
     }
 
-    func measureTrash() async {
-        let m = await measure([FileManager.default.homeDirectoryForCurrentUser.appending(path: ".Trash")])
-        trashBytes = m.partial && m.bytes == 0 ? nil : m.bytes
+    /// Passive refreshes (launch, scans) never prompt; only the user clicking Empty may.
+    func measureTrash(_ reason: TrashRefresh = .passive) async {
+        let folder = FileManager.default.homeDirectoryForCurrentUser.appending(path: ".Trash")
+        // Without Full Disk Access the folder can't be read, so Finder is asked (read-only, via Automation).
+        let runner = env.runner
+        trash = await trashState(at: folder, reason: reason, finderGranted: { Self.finderAutomationGranted() }) {
+            await FinderTrash.ask(runner: runner)
+        }
+    }
+
+    /// True only if Ballast may already control Finder and Finder is running. Never prompts and never launches Finder.
+    nonisolated private static func finderAutomationGranted() -> Bool {
+        let id = "com.apple.finder"
+        guard !NSRunningApplication.runningApplications(withBundleIdentifier: id).isEmpty else { return false }
+        let target = NSAppleEventDescriptor(bundleIdentifier: id)
+        return AEDeterminePermissionToAutomateTarget(target.aeDesc, typeWildCard, typeWildCard, false) == noErr
     }
 
     static let automationSettingsURL = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Automation")!
@@ -184,6 +204,8 @@ import UserNotifications
     /// Asks first, then has Finder empty the Trash.
     func emptyTrash() async {
         NSApp.activate(ignoringOtherApps: true)
+        await measureTrash(.clicked)
+        guard trash != .empty else { return }
         let alert = NSAlert()
         alert.messageText = "Empty the Trash?"
         alert.informativeText = "Everything in the Trash is deleted for good, including things you put there before. This can't be undone."
@@ -196,7 +218,9 @@ import UserNotifications
         guard alert.runModal() == .alertFirstButtonReturn else { return }
         var error: NSDictionary?
         NSAppleScript(source: "tell application \"Finder\" to empty trash")?.executeAndReturnError(&error)
-        if let error {
+        // Finder errors when there's nothing to empty; if it's empty now, that's the outcome we wanted.
+        if error != nil { await measureTrash(.clicked) }
+        if let error, trash.shouldReportFailure {
             let failed = NSAlert()
             failed.messageText = "Couldn't empty the Trash"
             // -1743: the user (or macOS, for an app without a usage description) said no to controlling Finder.
@@ -211,7 +235,7 @@ import UserNotifications
             }
         }
         refreshSpace()
-        await measureTrash()
+        await measureTrash(.clicked)
     }
 
     /// Checks hourly for updates, and scans in the background when the last summary is older than the interval.

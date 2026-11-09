@@ -6,6 +6,10 @@ struct Popover: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
+            if model.memory.isRed {
+                MemoryBlock(model: model)
+                Rule()
+            }
             freeSpace
             if let summary = model.summary {
                 Button { open(SafeView.id) } label: {
@@ -50,6 +54,7 @@ struct Popover: View {
         .padding(14)
         .frame(width: 320)
         .ballastSurface()
+        .task { if Screenshots.directory == nil { await model.memory.refreshForMenu() } }  // screenshots show made-up memory
     }
 
     var freeSpace: some View {
@@ -129,20 +134,7 @@ struct Popover: View {
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 
-    var trash: some View {
-        HStack {
-            Image(systemName: "trash").frame(width: 20)
-            Text("Trash")
-            Spacer()
-            if let bytes = model.trashBytes {
-                Text(formatBytes(bytes)).font(Theme.mono()).foregroundStyle(Theme.muted)
-            }
-            Button("Empty") { Task { await model.emptyTrash() } }
-                .buttonStyle(DangerButtonStyle(outline: true))
-                .controlSize(.small)
-                .disabled(model.trashBytes == 0)
-        }
-    }
+    var trash: some View { TrashRow(model: model) }
 
     var footer: some View {
         HStack {

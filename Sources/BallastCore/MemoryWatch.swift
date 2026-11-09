@@ -1,0 +1,193 @@
+import Darwin
+import Foundation
+
+// Thresholds. Percentages are of physical memory.
+private let redShareOfPhysical = 50          // top group at or above this goes red
+private let clearShareOfPhysical = 40        // top group must fall below this to clear
+private let jumpRiseShareOfPhysical = 15     // used rising by this much...
+private let jumpWindowSeconds: TimeInterval = 120  // ...within this many seconds...
+private let jumpEndsAtUsedPercent = 85       // ...and ending at or above this much used is a jump
+private let minimumRedSeconds: TimeInterval = 60   // stays red at least this long
+private let minimumTotalsSpacing: TimeInterval = 20  // extra readings closer than this aren't stored
+private let totalsWindowSize = 5             // readings of "used" kept, nothing more
+private let breakdownUsedPercent = 50        // below this (and calm) no breakdown is needed
+private let culpritSharePercent = 15         // a group needs this share to be named
+private let culpritLimit = 3
+private let growthMinimumBytes: Int64 = 1 << 30
+
+public enum MemoryPressure: Sendable { case normal, warning, critical }
+
+/// kern.memorystatus_vm_pressure_level: 1 normal, 2 warning, 4 critical. Anything else is treated as normal.
+public func memoryPressure(level: Int?) -> MemoryPressure {
+    switch level {
+    case 2: .warning
+    case 4: .critical
+    default: .normal
+    }
+}
+
+/// The kernel's pressure level right now; events only report changes, so this seeds the start. A failed read is normal.
+public func currentMemoryPressure() -> MemoryPressure {
+    var level: Int32 = 0
+    var size = MemoryLayout<Int32>.size
+    guard sysctlbyname("kern.memorystatus_vm_pressure_level", &level, &size, nil, 0) == 0 else { return .normal }
+    return memoryPressure(level: Int(level))
+}
+
+/// Decides whether the menu bar icon should be red. Holds at most five recent totals, in memory only.
+public struct MemoryWatch: Sendable {
+    private struct Total: Sendable { var used: Int64; var at: Date }
+
+    public private(set) var isRed: Bool = false
+    private var redSince: Date?
+    private var totals: [Total] = []
+
+    public init() {}
+
+    var storedTotalsCount: Int { totals.count }
+
+    private func hasJump(system: SystemMemory, now: Date) -> Bool {
+        guard system.physical > 0 else { return false }
+        guard system.used * 100 >= system.physical * Int64(jumpEndsAtUsedPercent) else { return false }
+        let needed = system.physical * Int64(jumpRiseShareOfPhysical)
+        return totals.contains { t in
+            let age = now.timeIntervalSince(t.at)
+            return age >= 0 && age <= jumpWindowSeconds && (system.used - t.used) * 100 >= needed
+        }
+    }
+
+    /// False only when memory is calm enough that no single app can be the problem.
+    public func needsBreakdown(system: SystemMemory, pressure: MemoryPressure, now: Date) -> Bool {
+        guard system.physical > 0 else { return false }
+        if isRed || pressure != .normal { return true }
+        if system.used * 100 >= system.physical * Int64(breakdownUsedPercent) { return true }
+        return hasJump(system: system, now: now)
+    }
+
+    /// `topGroupBytes` is nil when no breakdown was taken: that counts as no known hog.
+    public mutating func update(system: SystemMemory, pressure: MemoryPressure, topGroupBytes: Int64?, now: Date) {
+        defer {
+            if let newest = totals.last, now >= newest.at, now.timeIntervalSince(newest.at) < minimumTotalsSpacing {
+                // Too soon after the last stored reading; keep the older ones the jump rule needs.
+            } else {
+                totals.append(Total(used: system.used, at: now))
+            }
+            if totals.count > totalsWindowSize { totals.removeFirst(totals.count - totalsWindowSize) }
+        }
+        guard system.physical > 0 else {
+            isRed = false
+            redSince = nil
+            return
+        }
+        if let since = redSince, now < since { redSince = now }
+        let top = (topGroupBytes ?? 0) * 100
+        let jump = hasJump(system: system, now: now)
+        let triggered = pressure != .normal || top >= system.physical * Int64(redShareOfPhysical) || jump
+        if triggered {
+            if !isRed { redSince = now }
+            isRed = true
+            return
+        }
+        guard isRed else { return }
+        let calm = top < system.physical * Int64(clearShareOfPhysical)
+        let longEnough = redSince.map { now.timeIntervalSince($0) >= minimumRedSeconds } ?? true
+        if calm && longEnough {
+            isRed = false
+            redSince = nil
+        }
+    }
+}
+
+/// An earlier size of a group, kept to say how much it has grown.
+public struct GroupReading: Equatable, Sendable {
+    public var bytes: Int64
+    public var at: Date
+
+    public init(bytes: Int64, at: Date) {
+        self.bytes = bytes
+        self.at = at
+    }
+}
+
+public struct Culprit: Equatable, Sendable {
+    public var group: MemoryGroup
+    /// Whole percent of physical memory.
+    public var share: Int
+    public var growth: Int64?
+    public var growthSeconds: Int?
+
+    public init(group: MemoryGroup, share: Int, growth: Int64?, growthSeconds: Int?) {
+        self.group = group
+        self.share = share
+        self.growth = growth
+        self.growthSeconds = growthSeconds
+    }
+}
+
+/// How long a group's earlier size is kept as the point growth is measured from.
+private let baselineKeepSeconds: TimeInterval = 120
+
+/// The earlier sizes to measure the next scan's growth from. A group's baseline is kept until it is older than
+/// 2 minutes, then replaced by the current reading, so growth is measured over a window rather than over
+/// whatever the gap between two opens of the menu happened to be. A group missing from this scan is dropped.
+public func updatedBaselines(_ previous: [String: GroupReading], groups: [MemoryGroup], now: Date) -> [String: GroupReading] {
+    var next: [String: GroupReading] = [:]
+    for g in groups {
+        if let earlier = previous[g.id], now >= earlier.at, now.timeIntervalSince(earlier.at) <= baselineKeepSeconds {
+            next[g.id] = earlier
+        } else {
+            next[g.id] = GroupReading(bytes: g.bytes, at: now)
+        }
+    }
+    return next
+}
+
+/// Up to three groups holding at least 15% of physical memory, largest first.
+/// Growth is only given when an earlier reading exists and the group grew by at least 1 GB.
+public func culprits(_ groups: [MemoryGroup], physical: Int64, previous: [String: GroupReading], now: Date) -> [Culprit] {
+    guard physical > 0 else { return [] }
+    return groups
+        .sorted { $0.bytes > $1.bytes }
+        .filter { $0.bytes * 100 >= physical * Int64(culpritSharePercent) }
+        .prefix(culpritLimit)
+        .map { g in
+            let share = Int(min(100, max(0, (Double(g.bytes) / Double(physical) * 100).rounded())))
+            var growth: Int64?
+            var seconds: Int?
+            if let earlier = previous[g.id], g.bytes - earlier.bytes >= growthMinimumBytes {
+                growth = g.bytes - earlier.bytes
+                seconds = max(0, Int(now.timeIntervalSince(earlier.at)))
+            }
+            return Culprit(group: g, share: share, growth: growth, growthSeconds: seconds)
+        }
+}
+
+/// The menu bar symbol: memory strain first, then low disk space, then the calm one.
+public func menuBarSymbol(memoryRed: Bool, lowSpace: Bool) -> String {
+    if memoryRed { return "memorychip.fill" }
+    return lowSpace ? "scalemass.fill" : "scalemass"
+}
+
+private func growthDuration(_ seconds: Int) -> String {
+    if seconds < 120 { return "\(seconds) s" }
+    if seconds < 3600 * 2 { return "\(seconds / 60) min" }
+    return "\(seconds / 3600) hr"
+}
+
+private func figure(_ s: String) -> String { s.replacingOccurrences(of: " ", with: "\u{00A0}") }
+
+/// The first line of a culprit's row.
+public func culpritName(_ c: Culprit) -> String { c.group.name }
+
+/// The second, smaller line: process count (groups only), size, share, and growth when measured.
+/// Spaces inside each figure are no-break spaces, so a narrow menu wraps between figures, never inside one.
+public func culpritDetails(_ c: Culprit) -> String {
+    var parts: [String] = []
+    if c.group.processes.count > 1 { parts.append(figure("\(c.group.processes.count) processes")) }
+    parts.append(figure(formatBytes(c.group.bytes)))
+    parts.append(figure("\(c.share)% of memory"))
+    if let growth = c.growth, let seconds = c.growthSeconds {
+        parts.append(figure("up \(formatBytes(growth)) in \(growthDuration(seconds))"))
+    }
+    return parts.joined(separator: " · ")
+}

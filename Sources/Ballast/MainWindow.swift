@@ -97,13 +97,37 @@ struct Sidebar: View {
         }
         .ballastList(Theme.bg2)
         .safeAreaInset(edge: .bottom) {
-            HStack {
-                Text("\(formatBytes(model.free)) free").font(.caption).foregroundStyle(Theme.muted)
-                Spacer()
-                Button("Scan all") { Task { await model.scanNow() } }.buttonStyle(LineButtonStyle()).controlSize(.small).disabled(model.scanning)
+            VStack(spacing: 8) {
+                TrashRow(model: model)
+                HStack {
+                    Text("\(formatBytes(model.free)) free").font(.caption).foregroundStyle(Theme.muted)
+                    Spacer()
+                    Button("Scan all") { Task { await model.scanNow() } }.buttonStyle(LineButtonStyle()).controlSize(.small).disabled(model.scanning)
+                }
             }
             .padding(10)
             .background(Theme.bg2)
+        }
+    }
+}
+
+/// The Trash's size and its Empty button. Shared by the menu and the main window's sidebar, so both read `model.trash`.
+/// Showing it never asks Finder anything: only the Empty click does (`TrashRefresh.clicked`).
+struct TrashRow: View {
+    let model: AppModel
+
+    var body: some View {
+        HStack {
+            Image(systemName: "trash").frame(width: 20)
+            Text("Trash")
+            Spacer()
+            if let detail = model.trash.detail {
+                Text(detail).font(Theme.mono()).foregroundStyle(Theme.muted)
+            }
+            Button("Empty") { Task { await model.emptyTrash() } }
+                .buttonStyle(DangerButtonStyle(outline: true))
+                .controlSize(.small)
+                .disabled(model.trash == .empty)
         }
     }
 }

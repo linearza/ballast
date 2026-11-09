@@ -22,7 +22,13 @@ struct BallastApp: App {
         MenuBarExtra(isInserted: Binding(get: { !model.prefs.quiet }, set: { model.prefs.quiet = !$0 })) {
             Popover(model: model)
         } label: {
-            Image(systemName: model.lowSpace ? "scalemass.fill" : "scalemass")
+            let symbol = menuBarSymbol(memoryRed: model.memory.isRed, lowSpace: model.lowSpace)
+            if model.memory.isRed, let percent = model.memory.usedPercent {
+                // One Text with an inline image: MenuBarExtra labels keep a single image or text run, so an HStack/Label can drop one.
+                Text("\(Image(systemName: symbol)) \(percent)%")
+            } else {
+                Image(systemName: symbol)
+            }
         }
         .menuBarExtraStyle(.window)
         .commands {
