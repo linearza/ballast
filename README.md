@@ -61,7 +61,7 @@ The full list is under [Safety in detail](#safety-in-detail).
 
 ## A quick tour
 
-The menu bar icon shows free space at a glance. Click it for a summary of the biggest concerns and what's safe to reclaim, plus a connected iPhone's storage, or open the main window to review and remove things. Only one copy of Ballast runs at a time: opening it again brings up the window of the one already running.
+The menu bar icon shows free space at a glance. Click it for a summary of the biggest concerns and what's safe to reclaim, plus a connected iPhone's storage and the Trash's size with an Empty button (the main window's sidebar has the same), or open the main window to review and remove things. Only one copy of Ballast runs at a time: opening it again brings up the window of the one already running.
 
 <p align="center">
 <picture>

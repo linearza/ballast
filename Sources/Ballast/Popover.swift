@@ -134,20 +134,7 @@ struct Popover: View {
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 
-    var trash: some View {
-        HStack {
-            Image(systemName: "trash").frame(width: 20)
-            Text("Trash")
-            Spacer()
-            if let bytes = model.trashBytes {
-                Text(formatBytes(bytes)).font(Theme.mono()).foregroundStyle(Theme.muted)
-            }
-            Button("Empty") { Task { await model.emptyTrash() } }
-                .buttonStyle(DangerButtonStyle(outline: true))
-                .controlSize(.small)
-                .disabled(model.trashBytes == 0)
-        }
-    }
+    var trash: some View { TrashRow(model: model) }
 
     var footer: some View {
         HStack {
