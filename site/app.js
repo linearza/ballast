@@ -47,12 +47,6 @@
     box.appendChild(b);
   });
 
-  /* ---- categories: collapsible on small screens only ---- */
-  var wide = window.matchMedia("(min-width: 720px)");
-  function sync() { document.querySelectorAll(".cat details").forEach(function (d) { d.open = wide.matches; }); }
-  sync();
-  if (wide.addEventListener) wide.addEventListener("change", sync);
-
   /* ---- scan ledger ---- */
   var ledger = document.getElementById("ledger");
   if (!ledger || reduce) return;
